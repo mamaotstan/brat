@@ -4,9 +4,10 @@
   "description": "Brat style text animation video generator",
   "main": "src/gui/main.js",
   "scripts": {
-    "start": "electron src/gui/main.js",
+    "start": "electron .",
     "build": "electron-builder --win",
-    "build:dir": "electron-builder --win --dir"
+    "build:dir": "electron-builder --win --dir",
+    "release": "node scripts/build.js"
   },
   "keywords": [],
   "author": "",
@@ -33,7 +34,8 @@
       {
         "provider": "github",
         "owner": "Sqott47",
-        "repo": "brat"
+        "repo": "brat",
+        "releaseType": "release"
       }
     ],
     "directories": {

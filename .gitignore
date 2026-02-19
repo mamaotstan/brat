@@ -48,6 +48,8 @@ Release/
 
 # macOS / Windows / Linux OS generated files
 .DS_Store
+# Ignore the build script as requested
+scripts/build.js
 .DS_Store?
 ._*
 .Spotlight-V100

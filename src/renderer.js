@@ -73,7 +73,10 @@ const renderSegmentToStream = async (ctx, canvas, text, config, stream) => {
         if (f % 10 === 0) {
             await new Promise(r => setImmediate(r));
         }
-        const time = f / fps;
+
+        // Add a small offset so the first frame isn't 100% blank if fps/speed allow
+        let time = f / fps;
+
         let visibleCount = Math.min(totalChars, Math.floor(time * charsPerSecond));
         // Calculate partial progress to next character for smoother tracking
         const fractionalVisible = time * charsPerSecond;
@@ -129,19 +132,8 @@ const renderSegmentToStream = async (ctx, canvas, text, config, stream) => {
         ctx.textBaseline = 'top';
         ctx.font = `${fontWeight} ${cachedLayout ? cachedLayout.fontSize : 10}px "${fontBase}"`;
 
-        // Apply static or focus pull blur
+        // Apply static blur
         let currentBlur = config.blur || 0;
-
-        if (config.focusPull && visibleCount < totalChars) {
-            const startTime = (visibleCount - 1) / charsPerSecond;
-            const startFrame = startTime * fps;
-            const progress = (f - startFrame) / revealFrames;
-            if (progress < 1 && progress > -0.5) {
-                const p = Math.max(0, progress);
-                const blurSpike = 10 * (1 - easeOutCubic(p));
-                currentBlur = Math.max(currentBlur, blurSpike);
-            }
-        }
 
         if (currentBlur > 0) {
             ctx.filter = `blur(${currentBlur}px)`;

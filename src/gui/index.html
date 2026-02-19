@@ -198,6 +198,13 @@
             font-size: 14px;
             color: var(--text-main);
             font-weight: 500;
+            gap: 16px;
+        }
+
+        .toggle-label>div {
+            flex: 1;
+            min-width: 0;
+            line-height: 1.3;
         }
 
         .toggle-label span.desc {
@@ -473,7 +480,11 @@
                 <line x1="17" y1="17" x2="22" y2="17"></line>
                 <line x1="17" y1="7" x2="22" y2="7"></line>
             </svg>
-            <h1>Brat Generator</h1>
+            <div style="display:flex; flex-direction:column;">
+                <h1>Brat Generator</h1>
+                <span id="app-version"
+                    style="font-size: 11px; color: var(--text-muted); margin-top: -2px;">v1.0.0</span>
+            </div>
         </div>
 
         <!-- 1. Content Card -->
@@ -484,36 +495,36 @@
                     <path d="M12 20h9"></path>
                     <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                 </svg>
-                Content
+                Содержимое
             </div>
 
             <div class="input-group">
-                <label>Text</label>
+                <label>Текст</label>
                 <textarea id="inputText">brat generator</textarea>
             </div>
 
             <div class="input-row">
                 <div class="input-group">
-                    <label>Color</label>
+                    <label>Цвет</label>
                     <select id="textColor">
-                        <option value="#000000">Black</option>
-                        <option value="#ffffff" selected>White</option>
+                        <option value="#000000">Черный</option>
+                        <option value="#ffffff" selected>Белый</option>
                     </select>
                 </div>
                 <div class="input-group">
-                    <label>Alignment</label>
+                    <label>Выравнивание</label>
                     <select id="textAlign">
                         <option value="justify">Justify</option>
-                        <option value="left">Left</option>
-                        <option value="center">Center</option>
+                        <option value="left">Влево</option>
+                        <option value="center">По центру</option>
                     </select>
                 </div>
             </div>
 
             <label class="toggle-label">
                 <div>
-                    Text Auto-Wrap
-                    <span class="desc">Automatically break long lines to fit</span>
+                    Автоперенос текста
+                    <span class="desc">Автоматически переносить длинные строки</span>
                 </div>
                 <label class="toggle-switch">
                     <input type="checkbox" id="autoWrap" checked>
@@ -529,11 +540,11 @@
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                 </svg>
-                Motion & Optics
+                Движение и Оптика
             </div>
 
             <div class="input-group">
-                <label>Typing Speed <span id="speedValSpan" style="color:var(--text-main);">10 ch/s</span></label>
+                <label>Скорость печати <span id="speedValSpan" style="color:var(--text-main);">10 симв/с</span></label>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <input type="range" id="speedRange" min="1" max="60" value="10">
                     <input type="number" id="speedInput" value="10"
@@ -541,24 +552,16 @@
                 </div>
             </div>
 
-            <label class="toggle-label">
-                <div>
-                    Focus Pull
-                    <span class="desc">Cinematic blur on character entry</span>
-                </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="focusPull">
-                    <span class="slider-round"></span>
-                </label>
-            </label>
+
 
             <div class="input-group">
-                <label>Motion Blur Trails <span id="motionBlurVal" style="color:var(--text-main);">0</span></label>
+                <label>След движения (Motion Blur) <span id="motionBlurVal"
+                        style="color:var(--text-main);">0</span></label>
                 <input type="range" id="motionBlur" min="0" max="0.9" step="0.05" value="0">
             </div>
 
             <div class="input-group">
-                <label>Static Blur <span id="blurVal" style="color:var(--text-main);">2 px</span></label>
+                <label>Статичное размытие <span id="blurVal" style="color:var(--text-main);">2 px</span></label>
                 <input type="range" id="blurRange" min="0" max="10" step="0.5" value="2">
             </div>
         </div>
@@ -572,21 +575,21 @@
                     <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
                     <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
                 </svg>
-                Distortion
+                Искажения
             </div>
 
             <div class="input-group">
-                <label>Impact Jitter <span id="jitterVal" style="color:var(--text-main);">0</span></label>
+                <label>Тряска <span id="jitterVal" style="color:var(--text-main);">0</span></label>
                 <input type="range" id="jitter" min="0" max="20" step="1" value="0">
             </div>
 
             <div class="input-group">
-                <label>Chromatic Split <span id="chromaVal" style="color:var(--text-main);">0</span></label>
+                <label>Хроматическая аберрация <span id="chromaVal" style="color:var(--text-main);">0</span></label>
                 <input type="range" id="chroma" min="0" max="20" step="1" value="0">
             </div>
 
             <div class="input-group">
-                <label>Drop Shadow <span id="dropShadowVal" style="color:var(--text-main);">0</span></label>
+                <label>Тень <span id="dropShadowVal" style="color:var(--text-main);">0</span></label>
                 <input type="range" id="dropShadow" min="0" max="50" step="1" value="0">
             </div>
         </div>
@@ -600,12 +603,12 @@
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                Output Settings
+                Настройки Вывода
             </div>
 
             <div class="input-row">
                 <div class="input-group">
-                    <label>Resolution</label>
+                    <label>Разрешение</label>
                     <select id="resolution">
                         <option value="900" selected>900x900</option>
                         <option value="720">720x720</option>
@@ -613,18 +616,18 @@
                     </select>
                 </div>
                 <div class="input-group" style="flex: 0.5;">
-                    <label>FPS</label>
+                    <label>Кадры/с (FPS)</label>
                     <input type="number" id="fps" value="30">
                 </div>
             </div>
 
             <div class="input-group">
-                <label>Video Format</label>
+                <label>Формат Видео</label>
                 <select id="exportFormat">
-                    <option value="mov_prores" selected>MOV (Transparent ProRes)</option>
-                    <option value="mp4_green">MP4 (Green Screen)</option>
-                    <option value="mp4_black">MP4 (Black Background)</option>
-                    <option value="mp4_white">MP4 (White Background)</option>
+                    <option value="mov_prores" selected>MOV (Прозрачный ProRes)</option>
+                    <option value="mp4_green">MP4 (Зеленый экран)</option>
+                    <option value="mp4_black">MP4 (Черный фон)</option>
+                    <option value="mp4_white">MP4 (Белый фон)</option>
                 </select>
             </div>
 
@@ -635,8 +638,8 @@
                     <line x1="12" y1="8" x2="12" y2="12"></line>
                     <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                <span>ProRes MOV provides true transparency for video editors (CapCut/Premiere) but uses more disk
-                    space.</span>
+                <span>ProRes MOV обеспечивает прозрачность для видеоредакторов (CapCut/Premiere), но занимает больше
+                    места.</span>
             </div>
 
             <div style="display:flex; gap:10px; margin-top:8px;">
@@ -647,17 +650,17 @@
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                         <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    Save Image
+                    Сохранить Картинку
                 </button>
                 <button id="renderBtn" class="btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
-                    Render Video
+                    Рендер Видео
                 </button>
             </div>
-            <div class="status-text" id="status">Ready state</div>
+            <div class="status-text" id="status">Готово</div>
         </div>
     </div>
 
@@ -669,13 +672,13 @@
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span>Rendering Motion...</span>
+                <span>Рендеринг анимации...</span>
             </div>
             <button id="previewFab" class="preview-fab">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                 </svg>
-                Play Preview
+                Предпросмотр
             </button>
             <img id="preview-img" src="" alt="Static Outline Preview">
             <video id="preview-video" muted playsinline></video>
@@ -683,6 +686,11 @@
     </div>
 
     <script>
+        // Init App Version
+        window.electronAPI.getVersion().then(v => {
+            document.getElementById('app-version').innerText = `v${v}`;
+        });
+
         // Sync sliders & Labels
         const syncSliderLabel = (sliderId, labelId, suffix = '') => {
             const slider = document.getElementById(sliderId);
@@ -705,7 +713,7 @@
         const speedValSpan = document.getElementById('speedValSpan');
         speedRange.addEventListener('input', () => {
             speedInput.value = speedRange.value;
-            speedValSpan.innerText = speedRange.value + ' ch/s';
+            speedValSpan.innerText = speedRange.value + ' симв/с';
         });
 
         const statusParams = document.getElementById('status');
@@ -748,7 +756,6 @@
                 revealOffsetPx: 18,
                 endHold: 2,
                 blur: parseFloat(document.getElementById('blurRange').value),
-                focusPull: document.getElementById('focusPull').checked,
                 autoWrap: document.getElementById('autoWrap').checked,
                 motionBlur: parseFloat(document.getElementById('motionBlur').value),
                 jitter: parseInt(document.getElementById('jitter').value),
@@ -828,7 +835,7 @@
                 vid.style.opacity = '0';
                 img.style.opacity = '1';
 
-                statusParams.innerText = "Layout Updated";
+                statusParams.innerText = "Макет обновлен";
             }
         };
 
@@ -851,7 +858,7 @@
             if (el) el.addEventListener('input', handleControlChange);
         });
 
-        ['textAlign', 'autoWrap', 'textColor', 'focusPull', 'exportFormat'].forEach(id => {
+        ['textAlign', 'autoWrap', 'textColor', 'exportFormat'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', handleControlChange);
         });
@@ -870,12 +877,12 @@
         document.getElementById('saveScreenshot').addEventListener('click', async () => {
             const text = document.getElementById('inputText').value;
             const config = getConfig();
-            statusParams.innerText = "Saving screenshot...";
+            statusParams.innerText = "Сохранение картинки...";
             const result = await window.electronAPI.saveScreenshot({ text, config });
             if (result.success) {
-                statusParams.innerText = `Screenshot saved!`;
+                statusParams.innerText = `Картинка сохранена!`;
             } else {
-                statusParams.innerHTML = `<span style="color:var(--danger)">Error: ${result.error}</span>`;
+                statusParams.innerHTML = `<span style="color:var(--danger)">Ошибка: ${result.error}</span>`;
             }
         });
 
@@ -883,16 +890,16 @@
             const text = document.getElementById('inputText').value;
             const config = getConfig();
 
-            statusParams.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="spin" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"></circle></svg> Rendering Video...`;
+            statusParams.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="spin" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"></circle></svg> Рендеринг видео...`;
             document.getElementById('renderBtn').disabled = true;
 
             const result = await window.electronAPI.renderVideo({ text, config });
 
             document.getElementById('renderBtn').disabled = false;
             if (result.success) {
-                statusParams.innerText = `✅ Render Complete`;
+                statusParams.innerText = `✅ Рендер Завершен`;
             } else {
-                statusParams.innerHTML = `<span style="color:var(--danger)">Error: ${result.error || result.reason}</span>`;
+                statusParams.innerHTML = `<span style="color:var(--danger)">Ошибка: ${result.error || result.reason}</span>`;
             }
         });
 
@@ -904,7 +911,7 @@
                 if (defaultPreset) {
                     speedRange.value = defaultPreset.charsPerSecond || 10;
                     speedInput.value = defaultPreset.charsPerSecond || 10;
-                    speedValSpan.innerText = (defaultPreset.charsPerSecond || 10) + ' ch/s';
+                    speedValSpan.innerText = (defaultPreset.charsPerSecond || 10) + ' симв/с';
                 }
             }
             handleControlChange();

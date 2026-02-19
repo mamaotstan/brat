@@ -16,6 +16,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1000,
         height: 800,
+        resizable: false,
+        icon: path.join(__dirname, '../../assets/icon.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -24,6 +26,9 @@ function createWindow() {
         },
         backgroundColor: '#000000', // UI dark mode
     });
+
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.autoHideMenuBar = true;
 
     mainWindow.loadFile(path.join(__dirname, 'index.html'));
 }
@@ -78,9 +83,10 @@ autoUpdater.on('error', (err) => {
 // IPC Handlers
 
 // Get all presets
-ipcMain.handle('get-preset', () => {
-    return presets;
-});
+ipcMain.handle('get-preset', () => presets);
+
+// Get app version
+ipcMain.handle('get-version', () => app.getVersion());
 
 // Render Video
 ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
@@ -197,6 +203,28 @@ ipcMain.handle('generate-preview', async (event, { text, config }) => {
             fontBase, config.fontWeight, blockWidth, config.textAlign
         );
 
+        // Chromatic Aberration
+        if (config.chroma && config.chroma > 0) {
+            ctx.globalCompositeOperation = (config.exportFormat && config.exportFormat.includes('mp4_green')) ? 'source-over' : 'screen';
+
+            ctx.fillStyle = `rgba(255, 0, 0, 0.5)`;
+            flatChars.forEach(charObj => {
+                if (charObj.char.trim().length > 0) {
+                    ctx.fillText(charObj.char, charObj.x - config.chroma, charObj.y);
+                }
+            });
+
+            ctx.fillStyle = `rgba(0, 0, 255, 0.5)`;
+            flatChars.forEach(charObj => {
+                if (charObj.char.trim().length > 0) {
+                    ctx.fillText(charObj.char, charObj.x + config.chroma, charObj.y);
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        ctx.fillStyle = config.textColor;
+
         flatChars.forEach(charObj => {
             if (charObj.char.trim().length > 0) {
                 ctx.fillText(charObj.char, charObj.x, charObj.y);
@@ -255,6 +283,28 @@ ipcMain.handle('save-screenshot', async (event, { text, config }) => {
             ctx, lines, originX, originY, fontSize, config.lineHeight,
             fontBase, config.fontWeight, blockWidth, config.textAlign
         );
+
+        // Chromatic Aberration
+        if (config.chroma && config.chroma > 0) {
+            ctx.globalCompositeOperation = (config.exportFormat && config.exportFormat.includes('mp4_green')) ? 'source-over' : 'screen';
+
+            ctx.fillStyle = `rgba(255, 0, 0, 0.5)`;
+            flatChars.forEach(charObj => {
+                if (charObj.char.trim().length > 0) {
+                    ctx.fillText(charObj.char, charObj.x - config.chroma, charObj.y);
+                }
+            });
+
+            ctx.fillStyle = `rgba(0, 0, 255, 0.5)`;
+            flatChars.forEach(charObj => {
+                if (charObj.char.trim().length > 0) {
+                    ctx.fillText(charObj.char, charObj.x + config.chroma, charObj.y);
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        ctx.fillStyle = config.textColor;
 
         flatChars.forEach(charObj => {
             if (charObj.char.trim().length > 0) {
