@@ -29,6 +29,7 @@ jspm_packages/
 .env.test
 .env.production
 .env.development
+electron-builder.env
 
 # Electron specific
 # `electron-builder` output directory
