@@ -9,6 +9,7 @@ const presets = require('../presets');
 // Configure auto-updater logging
 log.transports.file.level = 'debug';
 autoUpdater.logger = log;
+autoUpdater.autoDownload = false; // Require user consent before downloading
 
 let mainWindow;
 
@@ -55,8 +56,20 @@ fs.ensureDirSync(app.getPath('temp'));
 
 // --- AUTO UPDATER LOGIC ---
 autoUpdater.on('update-available', (info) => {
-    log.info('Update available.');
-    // Optional: send message to window to show a tiny specific indicator
+    log.info('Update available:', info.version);
+
+    dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        title: 'Доступно обновление!',
+        message: `Новая версия Brat Video Generator (${info.version}) доступна для скачивания. Хотите загрузить и установить её сейчас?`,
+        buttons: ['Да, скачать', 'Позже'],
+        defaultId: 0,
+        cancelId: 1
+    }).then((result) => {
+        if (result.response === 0) {
+            autoUpdater.downloadUpdate();
+        }
+    });
 });
 
 autoUpdater.on('update-downloaded', (info) => {
@@ -65,9 +78,9 @@ autoUpdater.on('update-downloaded', (info) => {
     // Prompt user to install the update
     dialog.showMessageBox(mainWindow, {
         type: 'info',
-        title: 'Update Ready',
-        message: 'A new version of Brat Video Generator has been downloaded. Restart the application to apply the updates.',
-        buttons: ['Restart and Update', 'Later']
+        title: 'Обновление готово',
+        message: 'Обновление загружено. Перезапустить приложение для установки?',
+        buttons: ['Перезапустить сейчас', 'Установить при следующем запуске']
     }).then((result) => {
         if (result.response === 0) {
             autoUpdater.quitAndInstall(false, true);
