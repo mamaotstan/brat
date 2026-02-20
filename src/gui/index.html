@@ -763,6 +763,22 @@
                 </button>
             </div>
             <div class="status-text" id="status">Готово</div>
+
+            <!-- Donation Button -->
+            <a href="#" onclick="window.electronAPI.openExternal('https://boosty.to/mamaotstan/donate'); return false;"
+                style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #f15f2c, #e24915); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: transform 0.2s ease, opacity 0.2s ease;"
+                onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';"
+                onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)';">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                    <line x1="6" y1="1" x2="6" y2="4"></line>
+                    <line x1="10" y1="1" x2="10" y2="4"></line>
+                    <line x1="14" y1="1" x2="14" y2="4"></line>
+                </svg>
+                Поддержать автора на Boosty
+            </a>
         </div>
     </div>
 
@@ -1057,7 +1073,7 @@
                     batchGrid.appendChild(more);
                 }
 
-                statusParams.innerText = `Макет: ${inputs.length} видео`;
+                statusParams.innerHTML = ''; // Очищаем статус
             } else {
                 // Single mode
                 batchGrid.classList.remove('active');
@@ -1071,7 +1087,7 @@
                     singleImg.src = dataUrl;
                     vid.style.opacity = '0';
                     singleImg.style.opacity = '1';
-                    statusParams.innerText = "Макет обновлен";
+                    statusParams.innerHTML = ''; // Очищаем статус при изменении параметров
                 }
             }
         };
@@ -1185,7 +1201,6 @@
             if (isPickingColor) return;
             isPickingColor = true;
             eyedropperBtn.style.color = 'var(--accent)';
-            statusParams.innerText = "Кликните в любом месте экрана для выбора цвета...";
 
             // Use the Web EyeDropper API first (works natively in Chromium)
             if (window.EyeDropper) {
@@ -1197,9 +1212,7 @@
                     colorPicker.value = color;
                     colorSwatch.style.background = color;
                     updateStaticPreview();
-                    statusParams.innerText = `Цвет выбран: ${color}`;
                 } catch (e) {
-                    statusParams.innerText = "Отменено";
                 }
             } else {
                 // Fallback: native screen capture via IPC
@@ -1209,7 +1222,6 @@
                     colorPicker.value = color;
                     colorSwatch.style.background = color;
                     updateStaticPreview();
-                    statusParams.innerText = `Цвет выбран: ${color}`;
                 } else {
                     statusParams.innerText = "Ошибка выбора цвета";
                 }
@@ -1246,8 +1258,7 @@
             }
         });
 
-        let isRendering = false; // Added for renderBtn handler
-
+        let isRendering = false;
         document.getElementById('renderBtn').addEventListener('click', async () => {
             if (isRendering) return;
 
@@ -1275,7 +1286,26 @@
             document.getElementById('renderBtn').disabled = false;
             isRendering = false;
             if (result.success) {
-                statusParams.innerText = `✅ Рендер Завершен`;
+                // Determine text and file paths for the pill
+                const isBatch = config.batchMode;
+                const pillText = isBatch ? `✅ Батч-рендер завершен!` : `✅ Готово!`;
+                // If batch, it's an array of paths that need to be escaped properly for the inline ondragstart handler
+                const pathsArg = isBatch
+                    ? `JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(result.outputPath))}'))`
+                    : `'${result.outputPath.replace(/\\/g, '\\\\')}'`;
+
+                // Inject draggable pill
+                statusParams.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div>${pillText}</div>
+                    <div draggable="true" 
+                            style="cursor: grab; display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 255, 68, 0.1); border: 1px solid rgba(0, 255, 68, 0.3); padding: 4px 10px; border-radius: 6px; user-select: none;"
+                            ondragstart="event.preventDefault(); window.electronAPI.startDrag(${pathsArg});"
+                            title="Потяните ${isBatch ? 'эти файлы' : 'этот файл'} в CapCut или папку">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            Перетащить файл${isBatch ? 'ы' : ''} 
+                    </div>
+                </div>`;
             } else {
                 statusParams.innerHTML = `<span style="color:var(--danger)">Ошибка: ${result.error || result.reason}</span>`;
             }

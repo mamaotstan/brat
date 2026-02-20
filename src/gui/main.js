@@ -1,4 +1,15 @@
-const { app, BrowserWindow, ipcMain, dialog, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, desktopCapturer, shell } = require('electron');
+require('dotenv').config();
+const aptabase = require('@aptabase/electron/main');
+
+// Initialize Analytics absolutely first (Electron SDK Requirement)
+if (process.env.APTABASE_APP_KEY) {
+    aptabase.initialize(process.env.APTABASE_APP_KEY, { appVersion: app.getVersion() });
+    console.log('[Analytics] Aptabase initialized for appVersion:', app.getVersion());
+} else {
+    console.warn('[Analytics] APTABASE_APP_KEY is missing in .env! Telemetry disabled.');
+}
+
 const path = require('path');
 const fs = require('fs-extra');
 const { autoUpdater } = require('electron-updater');
@@ -35,6 +46,11 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+    if (process.env.APTABASE_APP_KEY) {
+        aptabase.trackEvent('app_started');
+        console.log('[Analytics] app_started event dispatched');
+    }
+
     createWindow();
 
     // Check for updates silently in the background
@@ -152,6 +168,33 @@ ipcMain.handle('get-system-fonts', () => {
     }
 });
 
+// Open link in default browser
+ipcMain.handle('open-external', async (event, url) => {
+    try {
+        await shell.openExternal(url);
+    } catch (e) {
+        console.error('Failed to open external url:', e);
+    }
+});
+
+// Drag and drop out of the app
+ipcMain.on('start-drag', (event, filePath) => {
+    const { nativeImage } = require('electron');
+    const path = require('path');
+    const iconPath = path.join(__dirname, '../../assets/icon.png');
+    const icon = nativeImage.createFromPath(iconPath);
+
+    // Electron supports files: [] for multiple files (macOS/Windows)
+    const dragPayload = { icon: icon };
+    if (Array.isArray(filePath)) {
+        dragPayload.files = filePath;
+    } else {
+        dragPayload.file = filePath;
+    }
+
+    event.sender.startDrag(dragPayload);
+});
+
 // Render Video
 ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
     try {
@@ -203,6 +246,8 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
         const { loadFonts } = require('../renderer');
         loadFonts(path.join(__dirname, '../../assets/fonts/Inter-Medium.ttf'));
 
+        const outputPaths = [];
+
         for (let i = 0; i < textsToRender.length; i++) {
             const lineText = textsToRender[i];
             let finalPath = outputPath;
@@ -215,10 +260,19 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
             }
 
             await renderVideo(lineText, config, finalPath);
+            outputPaths.push(finalPath);
+        }
+
+        if (process.env.APTABASE_APP_KEY) {
+            aptabase.trackEvent('render_video', {
+                format: config.exportFormat,
+                batchMode: isBatch,
+                count: textsToRender.length
+            });
         }
 
         mainWindow.focus();
-        return { success: true, outputPath };
+        return { success: true, outputPath: isBatch ? outputPaths : outputPaths[0] };
     } catch (err) {
         console.error(err);
         return { success: false, error: err.message };

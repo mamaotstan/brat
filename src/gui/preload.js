@@ -8,5 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     buildLivePreview: (data) => ipcRenderer.invoke('build-live-preview', data),
     getVersion: () => ipcRenderer.invoke('get-version'),
     getSystemFonts: () => ipcRenderer.invoke('get-system-fonts'),
-    pickScreenColor: () => ipcRenderer.invoke('pick-screen-color')
+    pickScreenColor: () => ipcRenderer.invoke('pick-screen-color'),
+    openExternal: (url) => ipcRenderer.invoke('open-external', url),
+    startDrag: (fileName) => ipcRenderer.send('start-drag', fileName)
 });
