@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brat Video Generator</title>
+    <title>2Pizza Generator</title>
     <!-- Use Inter font for a modern look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -136,7 +136,7 @@
             align-items: center;
         }
 
-        textarea,
+        .rich-textarea,
         select,
         input[type="number"] {
             width: 100%;
@@ -151,21 +151,72 @@
             outline: none;
         }
 
-        textarea {
+        .rich-textarea {
             resize: vertical;
             min-height: 80px;
             line-height: 1.4;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
 
-        textarea:focus,
+        .rich-textarea:focus,
         select:focus,
         input[type="number"]:focus {
             border-color: var(--accent);
         }
 
+        /* Floating format toolbar */
+        #formatToolbar {
+            position: absolute;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 100;
+        }
+
+        #formatToolbar.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #formatToolbar input[type="color"] {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        #formatToolbar button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        #formatToolbar button:hover {
+            background: var(--bg-hover);
+            color: var(--text-main);
+        }
+
         /* Range Slider Styling */
         input[type="range"] {
             -webkit-appearance: none;
+            appearance: none;
             width: 100%;
             height: 4px;
             background: var(--border);
@@ -523,18 +574,15 @@
     <div class="sidebar">
         <div class="header">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                <line x1="7" y1="2" x2="7" y2="22"></line>
-                <line x1="17" y1="2" x2="17" y2="22"></line>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <line x1="2" y1="7" x2="7" y2="7"></line>
-                <line x1="2" y1="17" x2="7" y2="17"></line>
-                <line x1="17" y1="17" x2="22" y2="17"></line>
-                <line x1="17" y1="7" x2="22" y2="7"></line>
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a10 10 0 0 1 10 10" />
+                <path d="M12 2C6.48 2 2 6.48 2 12l10 10 10-10C22 6.48 17.52 2 12 2z" />
+                <circle cx="9.5" cy="10.5" r="1" />
+                <circle cx="13" cy="8" r="0.5" />
+                <circle cx="14" cy="13" r="0.8" />
             </svg>
             <div style="display:flex; flex-direction:column;">
-                <h1>Brat Generator</h1>
+                <h1>2Pizza Generator</h1>
                 <span id="app-version"
                     style="font-size: 11px; color: var(--text-muted); margin-top: -2px;">v1.0.0</span>
             </div>
@@ -554,7 +602,9 @@
             <div id="text-input-container">
                 <div class="input-group">
                     <label>Текст</label>
-                    <textarea id="inputText">brat generator</textarea>
+                    <div id="inputText" class="rich-textarea" contenteditable="true">pizza generator</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">💡
+                        Выделяйте отдельные слова мышкой, чтобы красить их в разные цвета</div>
                 </div>
             </div>
 
@@ -612,6 +662,12 @@
                 </div>
             </div>
 
+            <div class="input-group">
+                <label>Безопасная зона (Отступы) <span id="paddingValSpan"
+                        style="color:var(--text-main);">8%</span></label>
+                <input type="range" id="paddingRatio" min="0.0" max="0.25" step="0.01" value="0.08">
+            </div>
+
             <label class="toggle-label">
                 <div>
                     Автоперенос текста
@@ -633,6 +689,20 @@
                     <span class="slider-round"></span>
                 </label>
             </label>
+
+            <!-- Mini Editor Button -->
+            <button id="openTimelineBtn" class="btn-secondary" style="margin-top: 12px; display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <line x1="10" y1="14" x2="10" y2="18"></line>
+                    <line x1="14" y1="14" x2="14" y2="18"></line>
+                </svg>
+                Открыть Таймлайн
+            </button>
         </div>
 
         <!-- 2. Motion & Optics Card -->
@@ -654,7 +724,62 @@
                 </div>
             </div>
 
+            <div class="input-group" style="margin-top: 16px;">
+                <label>Появление текста</label>
+                <select id="animationStyle">
+                    <option value="default" selected>Default (Pizza)</option>
+                    <option value="typewriter">Typewriter (Терминал)</option>
+                    <option value="glitch">Glitch (Матрица)</option>
+                </select>
+            </div>
 
+            <!-- Glitch Specific Controls -->
+            <div id="glitchControlsContainer"
+                style="display: none; margin-top: 12px; padding-left: 12px; border-left: 2px solid var(--border);">
+                <div class="input-group">
+                    <label>Набор символов (Glitch)</label>
+                    <select id="glitchCharset">
+                        <option value="symbols" selected>Символы (!@#$%...)</option>
+                        <option value="letters">Буквы (AaBbCc)</option>
+                        <option value="numbers">Цифры (0-9)</option>
+                        <option value="mixed">Смешанно (Всё вместе)</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-top: 8px;">
+                    <label>Скорость мерцания <span id="glitchSpeedVal"
+                            style="color:var(--text-main);">0.5</span></label>
+                    <input type="range" id="glitchSpeed" min="0.1" max="1.5" step="0.1" value="0.5">
+                </div>
+            </div>
+
+            <label class="toggle-label" style="margin-top: 12px; margin-bottom: 12px;">
+                <div>
+                    Мигающий курсор
+                    <span class="desc">Символ на конце строки</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="showCursor">
+                    <span class="slider-round"></span>
+                </label>
+            </label>
+
+            <!-- Cursor Controls -->
+            <div id="cursorControlsContainer"
+                style="display: none; margin-bottom: 12px; padding-left: 12px; border-left: 2px solid var(--border); gap: 12px; align-items: flex-end;">
+                <div class="input-group" style="flex: 1;">
+                    <label>Стиль</label>
+                    <select id="cursorStyle" style="padding: 6px;">
+                        <option value="|" selected>|</option>
+                        <option value="_">_</option>
+                        <option value="█">█</option>
+                    </select>
+                </div>
+
+                <div class="input-group" style="flex: 2;">
+                    <label>Скорость <span id="cursorSpeedVal" style="color:var(--text-main);">1.0</span>x</label>
+                    <input type="range" id="cursorSpeed" min="0.1" max="5.0" step="0.1" value="1.0">
+                </div>
+            </div>
 
             <div class="input-group">
                 <label>След движения (Motion Blur) <span id="motionBlurVal"
@@ -764,9 +889,22 @@
             </div>
             <div class="status-text" id="status">Готово</div>
 
+            <!-- Telegram Button -->
+            <a href="#" onclick="window.electronAPI.openExternal('https://t.me/twopizzamusic'); return false;"
+                style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #2AABEE, #229ED9); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: transform 0.2s ease, opacity 0.2s ease;"
+                onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';"
+                onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)';">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 2-7 20-4-9-9-4Z"></path>
+                    <path d="M22 2 11 13"></path>
+                </svg>
+                Телеграм канал автора
+            </a>
+
             <!-- Donation Button -->
             <a href="#" onclick="window.electronAPI.openExternal('https://boosty.to/mamaotstan/donate'); return false;"
-                style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #f15f2c, #e24915); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: transform 0.2s ease, opacity 0.2s ease;"
+                style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; padding: 12px; background: linear-gradient(135deg, #f15f2c, #e24915); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: transform 0.2s ease, opacity 0.2s ease;"
                 onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';"
                 onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)';">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -804,6 +942,9 @@
         </div>
     </div>
 
+
+    </div>
+
     <script>
         // Init App Version
         window.electronAPI.getVersion().then(v => {
@@ -816,7 +957,7 @@
             select.innerHTML = ''; // Clear placeholder
 
             // Prioritize common fonts at the top
-            const priority = ['Arial Narrow', 'Arial', 'Inter', 'Times New Roman', 'Comic Sans MS', 'Verdana', 'Georgia', 'Trebuchet MS'];
+            const priority = ['Arial Narrow', 'Impact', 'Monotype Corsiva', 'Gabriola', 'Arial', 'Inter', 'Times New Roman', 'Comic Sans MS', 'Verdana', 'Georgia', 'Trebuchet MS'];
             const prioritySet = new Set(priority);
 
             // Add priority fonts first (only if they exist in system)
@@ -869,6 +1010,8 @@
         syncSliderLabel('chroma', 'chromaVal');
         syncSliderLabel('dropShadow', 'dropShadowVal');
         syncSliderLabel('blurRange', 'blurVal', ' px');
+        syncSliderLabel('glitchSpeed', 'glitchSpeedVal');
+        syncSliderLabel('cursorSpeed', 'cursorSpeedVal');
 
         const speedRange = document.getElementById('speedRange');
         const speedInput = document.getElementById('speedInput'); // hidden, used by main logic
@@ -877,6 +1020,14 @@
             speedInput.value = speedRange.value;
             speedValSpan.innerText = speedRange.value + ' симв/с';
         });
+
+        const paddingRatioSlider = document.getElementById('paddingRatio');
+        const paddingValSpan = document.getElementById('paddingValSpan');
+        if (paddingRatioSlider && paddingValSpan) {
+            paddingRatioSlider.addEventListener('input', () => {
+                paddingValSpan.innerText = Math.round(paddingRatioSlider.value * 100) + '%';
+            });
+        }
 
         const statusParams = document.getElementById('status');
 
@@ -913,7 +1064,7 @@
                 fontFamily: document.getElementById('fontFamily').value,
                 fontWeight: 500,
                 lineHeight: 1,
-                paddingRatio: 0.04,
+                paddingRatio: parseFloat(document.getElementById('paddingRatio').value) || 0.08,
                 revealFrames: 3,
                 revealOffsetPx: 18,
                 endHold: 2,
@@ -923,7 +1074,13 @@
                 motionBlur: parseFloat(document.getElementById('motionBlur').value),
                 jitter: parseInt(document.getElementById('jitter').value),
                 chroma: parseInt(document.getElementById('chroma').value),
-                dropShadow: parseInt(document.getElementById('dropShadow').value)
+                dropShadow: parseInt(document.getElementById('dropShadow').value),
+                animationStyle: document.getElementById('animationStyle').value,
+                showCursor: document.getElementById('showCursor').checked,
+                cursorStyle: document.getElementById('cursorStyle').value,
+                cursorSpeed: parseFloat(document.getElementById('cursorSpeed').value),
+                glitchSpeed: parseFloat(document.getElementById('glitchSpeed').value),
+                glitchCharset: document.getElementById('glitchCharset').value
             };
         };
 
@@ -974,12 +1131,89 @@
             }
         };
 
+        // Format toolbar DOM
+        const formatToolbar = document.createElement('div');
+        formatToolbar.id = 'formatToolbar';
+        formatToolbar.innerHTML = `
+            <input type="color" id="toolbarColorBtn" value="#ffffff" title="Цвет выделенного текста">
+            <button id="toolbarClearBtn" title="Сбросить цвет" style="width: auto;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M15 9l-6 6"></path></svg>
+            </button>
+        `;
+        document.body.appendChild(formatToolbar);
+
+        const toolbarColorBtn = document.getElementById('toolbarColorBtn');
+        const toolbarClearBtn = document.getElementById('toolbarClearBtn');
+
+        // Text extraction helper mapping innerHTML to <c:#hex>word</c> tags
+        const extractRichText = (element) => {
+            if (!element) return "";
+            let html = element.innerHTML;
+
+            // Remove zero width spaces that sometimes get left by contenteditable
+            html = html.replace(/\u200B/g, '');
+
+            // Convert existing <span style="color: ..."> to custom formatting <c:...> tags recursively or simple regex
+            // Basic simplistic regex parsing for this case, sufficient for our single-level formatting
+            // In contenteditable, enter creates <div>...</div> or <br>
+            // First replace <br> with newline 
+            let parsed = html.replace(/<br\s*[\/]?>/gi, '\n');
+            // Extract divs to newlines 
+            parsed = parsed.replace(/<div[^>]*>/gi, '\n').replace(/<\/div>/gi, '');
+
+            // Re-map spans with colors. Example: <font color="#ff0000"> or <span style="color: rgb(...)"> 
+            // In Chrome/Electron, setting color via execCommand usually wraps in <font color="..."> 
+            // or <span style="color: ...;">
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = parsed;
+
+            const extractWithColorTags = (node) => {
+                let out = "";
+                for (const child of node.childNodes) {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        out += child.nodeValue;
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        let cTag = null;
+                        if (child.tagName === 'FONT' && child.color) {
+                            cTag = child.color;
+                        } else if (child.style && child.style.color) {
+                            cTag = child.style.color;
+                            // Ensure it's hex, style.color returns rgb(...)
+                            if (cTag.startsWith('rgb')) {
+                                cTag = rgb2hex(cTag);
+                            }
+                        }
+
+                        let inner = extractWithColorTags(child);
+                        if (cTag && inner.length > 0) {
+                            out += `<c:${cTag}>${inner}</c>`;
+                        } else {
+                            out += inner;
+                        }
+                    }
+                }
+                return out;
+            };
+
+            return extractWithColorTags(tempDiv).trim();
+        };
+
+        const rgb2hex = (rgb) => {
+            if (!rgb) return "";
+            let res = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+            if (!res) return rgb;
+            return "#" +
+                ("0" + parseInt(res[1], 10).toString(16)).slice(-2) +
+                ("0" + parseInt(res[2], 10).toString(16)).slice(-2) +
+                ("0" + parseInt(res[3], 10).toString(16)).slice(-2);
+        };
+
         const getTextForPreview = () => {
             if (document.getElementById('batchMode').checked) {
                 const inputs = document.querySelectorAll('.batch-inputText');
-                return inputs.length > 0 ? inputs[0].value : "";
+                return inputs.length > 0 ? extractRichText(inputs[0]) : "";
             }
-            return document.getElementById('inputText').value;
+            return extractRichText(document.getElementById('inputText'));
         };
 
         const updateStaticPreview = async () => {
@@ -1031,7 +1265,7 @@
 
                 // Add missing thumbs or update existing ones
                 for (let i = 0; i < count; i++) {
-                    const text = inputs[i].value || '';
+                    const text = extractRichText(inputs[i]) || '';
                     let thumb = batchGrid.querySelector(`.batch-thumb[data-idx="${i}"]`);
                     let img;
 
@@ -1081,7 +1315,7 @@
                 singleImg.style.display = '';
                 vid.style.display = '';
 
-                const text = document.getElementById('inputText').value;
+                const text = extractRichText(document.getElementById('inputText')) || '';
                 const dataUrl = await window.electronAPI.generatePreview({ text, config });
                 if (dataUrl) {
                     singleImg.src = dataUrl;
@@ -1106,6 +1340,97 @@
         // Bind Real-time updates
         document.getElementById('inputText').addEventListener('input', handleControlChange);
 
+        // Selection / Toolbar logic
+        let currentSelectionRange = null;
+        let lastFocusedRichText = null;
+
+        // Prevent color bleeding when typing after a colored word
+        document.addEventListener('keydown', (e) => {
+            if (e.target.classList && e.target.classList.contains('rich-textarea')) {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    const sel = window.getSelection();
+                    if (sel && sel.isCollapsed) {
+                        setTimeout(() => {
+                            document.execCommand('removeFormat', false, null);
+                        }, 0);
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('selectionchange', () => {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+                // Check if selection is inside a .rich-textarea
+                let node = selection.anchorNode;
+                let isRichText = false;
+                while (node && node.nodeType) {
+                    if (node.nodeType === 1 && node.classList && node.classList.contains('rich-textarea')) {
+                        isRichText = true;
+                        lastFocusedRichText = node;
+                        break;
+                    }
+                    node = node.parentNode;
+                }
+
+                if (isRichText) {
+                    const range = selection.getRangeAt(0);
+                    currentSelectionRange = range;
+                    const rect = range.getBoundingClientRect();
+
+                    // Format toolbar positioning relative to screen
+                    formatToolbar.style.left = `${rect.left + (rect.width / 2) - 40}px`;
+                    formatToolbar.style.top = `${rect.top - 40}px`;
+                    formatToolbar.classList.add('active');
+                } else {
+                    formatToolbar.classList.remove('active');
+                    currentSelectionRange = null;
+                }
+            } else {
+                formatToolbar.classList.remove('active');
+                currentSelectionRange = null;
+            }
+        });
+
+        // Hide toolbar when clicking outside or typing
+        document.addEventListener('mousedown', (e) => {
+            if (!formatToolbar.contains(e.target) && !e.target.closest('.rich-textarea')) {
+                formatToolbar.classList.remove('active');
+                currentSelectionRange = null;
+            }
+        });
+
+        toolbarColorBtn.addEventListener('input', (e) => {
+            applyFormatting('foreColor', e.target.value);
+        });
+
+        toolbarClearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            applyFormatting('removeFormat', null);
+            // Optionally, we might need to reset color back to inherited
+            // document.execCommand('styleWithCSS', false, true) and then removing specific inline styles is tricky natively.
+            // Executing forecolor on #TEXT_COLOR works but we don't know the exact global here securely, fallback 'removeFormat'
+        });
+
+        const applyFormatting = (command, value) => {
+            if (currentSelectionRange && lastFocusedRichText) {
+                // Restore selection if it was lost
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(currentSelectionRange);
+
+                document.execCommand('styleWithCSS', false, true);
+                if (command === 'removeFormat') {
+                    // Quick way to clear inline color from selection inside content editable
+                    document.execCommand('removeFormat', false, null);
+                } else {
+                    document.execCommand(command, false, value);
+                }
+
+                handleControlChange();
+            }
+        };
+
         // Batch Mode UI Logic
         const addBatchVideo = (defaultText = "") => {
             const list = document.getElementById('batchList');
@@ -1119,7 +1444,8 @@
                     <label style="margin: 0;">Видео ${count}</label>
                     <span class="remove-btn" style="color: #ff4444; font-size: 12px; cursor: pointer; display: ${count === 1 ? 'none' : 'block'};">Удалить</span>
                 </div>
-                <textarea class="batch-inputText" style="height: 60px;">${defaultText}</textarea>
+                <div class="batch-inputText rich-textarea" contenteditable="true" style="height: 60px;">${defaultText}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">💡 Выделяйте отдельные слова мышкой, чтобы красить их в разные цвета</div>
             `;
 
             div.querySelector('.remove-btn').addEventListener('click', () => {
@@ -1136,35 +1462,62 @@
         };
 
         // Add first one by default
-        addBatchVideo("brat generator");
+        addBatchVideo("pizza generator");
 
         document.getElementById('addBatchBtn').addEventListener('click', () => {
             addBatchVideo("");
         });
 
+        const openTimelineBtn = document.getElementById('openTimelineBtn');
+
         document.getElementById('batchMode').addEventListener('change', (e) => {
             if (e.target.checked) {
                 document.getElementById('text-input-container').style.display = 'none';
                 document.getElementById('batch-input-container').style.display = 'block';
+                // User wants to use the main preview button even in batch mode, or the timeline button wasn't visible?
+                // Actually if they meant the main "Preview" button, let's leave it visible if timeline is open, or just leave it visible.
                 document.getElementById('previewFab').style.display = 'none';
+                // openTimelineBtn.style.display = 'flex'; // Timeline hidden for now
             } else {
                 document.getElementById('text-input-container').style.display = 'block';
                 document.getElementById('batch-input-container').style.display = 'none';
                 document.getElementById('previewFab').style.display = '';
+                openTimelineBtn.style.display = 'none';
             }
             handleControlChange();
         });
 
         // Update listeners
-        ['resolution', 'fps', 'speedRange', 'blurRange', 'motionBlur', 'jitter', 'chroma', 'dropShadow'].forEach(id => {
+        ['resolution', 'fps', 'speedRange', 'blurRange', 'motionBlur', 'jitter', 'chroma', 'dropShadow', 'glitchSpeed', 'cursorSpeed', 'paddingRatio'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', handleControlChange);
         });
 
-        ['textAlign', 'autoWrap', 'fontFamily', 'exportFormat'].forEach(id => {
+        ['textAlign', 'autoWrap', 'fontFamily', 'exportFormat', 'animationStyle', 'showCursor', 'cursorStyle', 'glitchCharset'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', handleControlChange);
         });
+
+        // Show/hide glitch controls
+        const animSel = document.getElementById('animationStyle');
+        if (animSel) {
+            animSel.addEventListener('change', (e) => {
+                const glitchControls = document.getElementById('glitchControlsContainer');
+                if (glitchControls) glitchControls.style.display = e.target.value === 'glitch' ? 'block' : 'none';
+            });
+        }
+
+        // Show/hide cursor tweaks
+        const showCursorTgl = document.getElementById('showCursor');
+        if (showCursorTgl) {
+            showCursorTgl.addEventListener('change', (e) => {
+                const cursorControls = document.getElementById('cursorControlsContainer');
+                if (cursorControls) cursorControls.style.display = e.target.checked ? 'flex' : 'none';
+            });
+            // init
+            const cursorControls = document.getElementById('cursorControlsContainer');
+            if (cursorControls) cursorControls.style.display = showCursorTgl.checked ? 'flex' : 'none';
+        }
 
         // Sync color picker <-> hex text input (instant, no debounce)
         const colorSwatch = document.getElementById('colorSwatch');
@@ -1247,7 +1600,7 @@
         });
 
         document.getElementById('saveScreenshot').addEventListener('click', async () => {
-            const text = document.getElementById('inputText').value;
+            const text = getTextForPreview();
             const config = getConfig();
             statusParams.innerText = "Сохранение картинки...";
             const result = await window.electronAPI.saveScreenshot({ text, config });
@@ -1266,14 +1619,14 @@
             const config = getConfig();
             if (config.batchMode) {
                 text = Array.from(document.querySelectorAll('.batch-inputText'))
-                    .map(i => i.value)
+                    .map(i => extractRichText(i))
                     .filter(t => t.trim().length > 0);
                 if (text.length === 0) {
                     statusParams.innerText = "Ошибка: Добавьте хотя бы одно видео с текстом.";
                     return;
                 }
             } else {
-                text = document.getElementById('inputText').value;
+                text = extractRichText(document.getElementById('inputText'));
             }
 
             isRendering = true;
@@ -1324,6 +1677,21 @@
             }
             handleControlChange();
         });
+        // --- TIMELINE EDITOR LOGIC ---
+
+
+
+        openTimelineBtn.addEventListener('click', () => {
+            const inputs = document.querySelectorAll('.batch-inputText');
+            const texts = Array.from(inputs).map(i => extractRichText(i)).filter(t => t.trim().length > 0);
+            if (texts.length === 0) {
+                alert("Сначала добавьте текст в режиме батча!");
+                return;
+            }
+
+            window.electronAPI.openTimeline({ texts, config: getConfig() });
+        });
+
     </script>
 </body>
 

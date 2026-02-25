@@ -77,7 +77,7 @@ autoUpdater.on('update-available', (info) => {
     dialog.showMessageBox(mainWindow, {
         type: 'question',
         title: 'Доступно обновление!',
-        message: `Новая версия Brat Video Generator (${info.version}) доступна для скачивания. Хотите загрузить и установить её сейчас?`,
+        message: `Новая версия 2Pizza Generator (${info.version}) доступна для скачивания. Хотите загрузить и установить её сейчас?`,
         buttons: ['Да, скачать', 'Позже'],
         defaultId: 0,
         cancelId: 1
@@ -180,7 +180,6 @@ ipcMain.handle('open-external', async (event, url) => {
 // Drag and drop out of the app
 ipcMain.on('start-drag', (event, filePath) => {
     const { nativeImage } = require('electron');
-    const path = require('path');
     const iconPath = path.join(__dirname, '../../assets/icon.png');
     const icon = nativeImage.createFromPath(iconPath);
 
@@ -195,6 +194,21 @@ ipcMain.on('start-drag', (event, filePath) => {
     event.sender.startDrag(dragPayload);
 });
 
+// Helper: auto-increment filename if it already exists
+const getUniqueOutputPath = (filePath) => {
+    if (!fs.existsSync(filePath)) return filePath;
+    const dir = path.dirname(filePath);
+    const ext = path.extname(filePath);
+    const base = path.basename(filePath, ext);
+    let counter = 1;
+    let candidate;
+    do {
+        candidate = path.join(dir, `${base}_${counter}${ext}`);
+        counter++;
+    } while (fs.existsSync(candidate));
+    return candidate;
+};
+
 // Render Video
 ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
     try {
@@ -206,10 +220,15 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
         }
 
         if (!outputPath) {
+            // Ensure default output folder exists
+            const defaultDir = path.join(app.getPath('documents'), '2pizza');
+            if (!fs.existsSync(defaultDir)) fs.mkdirSync(defaultDir, { recursive: true });
+
             if (isBatch) {
                 const { filePaths } = await dialog.showOpenDialog(mainWindow, {
                     buttonLabel: 'Выбрать папку',
                     title: `Куда сохранить ${textsToRender.length} видео?`,
+                    defaultPath: defaultDir,
                     properties: ['openDirectory']
                 });
                 if (!filePaths || filePaths.length === 0) return { success: false, reason: 'cancelled' };
@@ -217,7 +236,7 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
             } else {
                 // Use first word of text as default filename
                 const baseText = Array.isArray(text) ? textsToRender[0] : text;
-                const firstWord = (baseText || '').trim().split(/\s+/)[0] || 'brat_video';
+                const firstWord = (baseText || '').trim().split(/\s+/)[0] || '2pizza_video';
                 const safeName = firstWord.replace(/[^a-zA-Zа-яА-ЯёЁ0-9_-]/g, '_');
 
                 let dfExt = 'mp4';
@@ -228,7 +247,7 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
                 }
                 const { filePath } = await dialog.showSaveDialog(mainWindow, {
                     buttonLabel: 'Save Video',
-                    defaultPath: `${safeName}.${dfExt}`,
+                    defaultPath: getUniqueOutputPath(path.join(defaultDir, `${safeName}.${dfExt}`)),
                     filters: [{ name: dfName, extensions: [dfExt] }]
                 });
 
@@ -254,12 +273,12 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
 
             if (isBatch) {
                 let dfExt = config.exportFormat === 'mov_prores' ? 'mov' : 'mp4';
-                const safeName = lineText.split(/\s+/)[0].replace(/[^a-zA-Zа-яА-ЯёЁ0-9_-]/g, '_') || `video_${i + 1}`;
-                finalPath = path.join(outputPath, `${safeName}_${i + 1}.${dfExt}`);
+                const safeName = lineText.split(/\s+/)[0].replace(/[^a-zA-Zа-яА-ЯёЁ0-9_-]/g, '_') || `video`;
+                finalPath = getUniqueOutputPath(path.join(outputPath, `${safeName}.${dfExt}`));
                 console.log(`Rendering batch video ${i + 1}/${textsToRender.length}: ${finalPath}`);
             }
 
-            await renderVideo(lineText, config, finalPath);
+            finalPath = await renderVideo(lineText, { ...config }, finalPath) || finalPath;
             outputPaths.push(finalPath);
         }
 
@@ -279,17 +298,72 @@ ipcMain.handle('render-video', async (event, { text, config, outputPath }) => {
     }
 });
 
+// Render Timeline Video
+ipcMain.handle('render-timeline-video', async (event, { timelineData, config }) => {
+    try {
+        console.log('Rendering Timeline with config:', config);
+
+        let dfExt = 'mp4';
+        let dfName = 'MP4 Video';
+        if (config.exportFormat === 'mov_prores') {
+            dfExt = 'mov';
+            dfName = 'MOV Video (ProRes with Alpha)';
+        }
+
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            buttonLabel: 'Save Timeline Video',
+            defaultPath: getUniqueOutputPath(path.join(app.getPath('documents'), '2pizza', `timeline_video.${dfExt}`)),
+            filters: [{ name: dfName, extensions: [dfExt] }]
+        });
+
+        if (!filePath) return { success: false, reason: 'cancelled' };
+
+        config.width = parseInt(config.width);
+        config.height = parseInt(config.height);
+        config.fps = parseInt(config.fps);
+        config.charsPerSecond = parseFloat(config.charsPerSecond);
+        config.fontSizeOverride = config.fontSizeOverride ? parseInt(config.fontSizeOverride) : null;
+
+        const { loadFonts, renderTimeline } = require('../renderer');
+        loadFonts(path.join(__dirname, '../../assets/fonts/Inter-Medium.ttf'));
+
+        // Call specialized timeline renderer
+        await renderTimeline(timelineData, config, filePath);
+
+        if (process.env.APTABASE_APP_KEY) {
+            aptabase.trackEvent('render_timeline_video', {
+                format: config.exportFormat,
+                blocksCount: timelineData.length,
+                totalDuration: config.totalDuration
+            });
+        }
+
+        mainWindow.focus();
+        return { success: true, outputPath: filePath };
+    } catch (err) {
+        console.error(err);
+        return { success: false, error: err.message };
+    }
+});
+
 // Build Animated Preview (WebM chunk)
 ipcMain.handle('build-live-preview', async (event, { text, config }) => {
     try {
         console.log('Building Live Preview Stream...');
         // Force settings for faster/lighter preview
         const previewConfig = { ...config };
-        previewConfig.width = Math.min(previewConfig.width, 500); // cap size
-        previewConfig.height = Math.min(previewConfig.height, 500);
         previewConfig.isPreview = true; // Tell ffmpeg to use webm, but keep original exportFormat for background clearing logic
 
-        const tmpPath = path.join(app.getPath('temp'), `brat_preview_${Date.now()}.webm`);
+        // If rendering for timeline, adjust the typing speed to match the block duration
+        if (previewConfig.blockDuration) {
+            const totalChars = text.length;
+            previewConfig.charsPerSecond = totalChars / previewConfig.blockDuration;
+            // Ensure it doesn't leave an empty trailing duration, preview should exactly match the block 
+            // but renderer video also has endHold, we'll let renderVideo logic handle that or set it to 0
+            // if we just want a tight preview. We'll leave endHold config as is for now.
+        }
+
+        const tmpPath = path.join(app.getPath('temp'), `2pizza_preview_${Date.now()}.webm`);
 
         const { loadFonts, renderVideo } = require('../renderer');
         loadFonts(path.join(__dirname, '../../assets/fonts/Inter-Medium.ttf'));
@@ -335,6 +409,7 @@ ipcMain.handle('generate-preview', async (event, { text, config }) => {
         ctx.textBaseline = 'top';
 
         if (config.dropShadow && config.dropShadow > 0) {
+            // Shadow color will be handled per character
             ctx.shadowColor = config.textColor === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)';
             ctx.shadowBlur = config.dropShadow;
             ctx.shadowOffsetX = 0;
@@ -347,7 +422,7 @@ ipcMain.handle('generate-preview', async (event, { text, config }) => {
 
         const flatChars = getFlatCharacterPositions(
             ctx, lines, originX, originY, fontSize, config.lineHeight,
-            fontBase, config.fontWeight, blockWidth, config.textAlign
+            fontBase, config.fontWeight, blockWidth, config.textAlign, layout.colorMap
         );
 
         // Chromatic Aberration
@@ -370,10 +445,19 @@ ipcMain.handle('generate-preview', async (event, { text, config }) => {
             ctx.globalCompositeOperation = 'source-over';
         }
 
-        ctx.fillStyle = config.textColor;
-
         flatChars.forEach(charObj => {
             if (charObj.char.trim().length > 0) {
+                if (charObj.color) {
+                    ctx.fillStyle = charObj.color;
+                    if (config.dropShadow && config.dropShadow > 0) {
+                        ctx.shadowColor = charObj.color === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)';
+                    }
+                } else {
+                    ctx.fillStyle = config.textColor;
+                    if (config.dropShadow && config.dropShadow > 0) {
+                        ctx.shadowColor = config.textColor === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)';
+                    }
+                }
                 ctx.fillText(charObj.char, charObj.x, charObj.y);
             }
         });
@@ -428,7 +512,7 @@ ipcMain.handle('save-screenshot', async (event, { text, config }) => {
 
         const flatChars = getFlatCharacterPositions(
             ctx, lines, originX, originY, fontSize, config.lineHeight,
-            fontBase, config.fontWeight, blockWidth, config.textAlign
+            fontBase, config.fontWeight, blockWidth, config.textAlign, layout.colorMap
         );
 
         // Chromatic Aberration
@@ -451,17 +535,26 @@ ipcMain.handle('save-screenshot', async (event, { text, config }) => {
             ctx.globalCompositeOperation = 'source-over';
         }
 
-        ctx.fillStyle = config.textColor;
-
         flatChars.forEach(charObj => {
             if (charObj.char.trim().length > 0) {
+                if (charObj.color) {
+                    ctx.fillStyle = charObj.color;
+                    if (config.dropShadow && config.dropShadow > 0) {
+                        ctx.shadowColor = charObj.color === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)';
+                    }
+                } else {
+                    ctx.fillStyle = config.textColor;
+                    if (config.dropShadow && config.dropShadow > 0) {
+                        ctx.shadowColor = config.textColor === '#ffffff' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)';
+                    }
+                }
                 ctx.fillText(charObj.char, charObj.x, charObj.y);
             }
         });
 
         const { filePath } = await dialog.showSaveDialog(mainWindow, {
             buttonLabel: 'Save Screenshot',
-            defaultPath: 'brat_screenshot.png',
+            defaultPath: path.join(app.getPath('documents'), '2pizza', '2pizza_screenshot.png'),
             filters: [{ name: 'PNG Image', extensions: ['png'] }]
         });
 
@@ -477,6 +570,60 @@ ipcMain.handle('save-screenshot', async (event, { text, config }) => {
     }
 });
 
-function extractFontName(fontFamily) {
-    return fontFamily || "Arial";
-}
+// extractFontName removed (dead code)
+
+let timelineWindow = null;
+let globalTimelineData = { texts: [], config: {} };
+
+ipcMain.handle('open-timeline', async (event, data) => {
+    globalTimelineData = data;
+
+    if (timelineWindow) {
+        timelineWindow.focus();
+        // Send an event incase they just updated texts while it was open?
+        // timelineWindow.webContents.send('timeline-data-updated', globalTimelineData);
+        return { success: true };
+    }
+
+    timelineWindow = new BrowserWindow({
+        width: 1000,
+        height: 700,
+        title: 'Редактор Таймлайна',
+        icon: path.join(__dirname, '../../assets/icon.png'),
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            webSecurity: false
+        },
+        backgroundColor: '#000000'
+    });
+
+    timelineWindow.setMenuBarVisibility(false);
+    timelineWindow.autoHideMenuBar = true;
+
+    timelineWindow.loadFile(path.join(__dirname, 'timeline.html'));
+
+    timelineWindow.on('closed', () => {
+        timelineWindow = null;
+    });
+
+    return { success: true };
+});
+
+ipcMain.handle('get-timeline-data', () => {
+    return globalTimelineData;
+});
+
+ipcMain.handle('save-timeline-data', (event, data) => {
+    if (data) {
+        globalTimelineData = data;
+    }
+    return { success: true };
+});
+
+ipcMain.handle('close-timeline', () => {
+    if (timelineWindow) {
+        timelineWindow.close();
+    }
+});

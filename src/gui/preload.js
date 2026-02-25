@@ -10,5 +10,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getSystemFonts: () => ipcRenderer.invoke('get-system-fonts'),
     pickScreenColor: () => ipcRenderer.invoke('pick-screen-color'),
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
-    startDrag: (fileName) => ipcRenderer.send('start-drag', fileName)
+    startDrag: (fileName) => ipcRenderer.send('start-drag', fileName),
+    renderTimelineVideo: (data) => ipcRenderer.invoke('render-timeline-video', data),
+    openTimeline: (data) => ipcRenderer.invoke('open-timeline', data),
+    getTimelineData: () => ipcRenderer.invoke('get-timeline-data'),
+    saveTimelineData: (data) => ipcRenderer.invoke('save-timeline-data', data),
+    closeTimeline: () => ipcRenderer.invoke('close-timeline')
 });
