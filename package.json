@@ -1,13 +1,14 @@
 {
   "name": "brat-video-gen",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "Pizza style text animation video generator",
   "main": "src/gui/main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
     "build:dir": "electron-builder --win --dir",
-    "release": "node scripts/build.js"
+    "release": "node scripts/build.js",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,7 @@
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",
     "fs-extra": "^11.3.3",
+    "onnxruntime-node": "^1.22.0",
     "potrace": "^2.1.8",
     "svg-path-bounds": "^1.0.2",
     "yargs": "^18.0.0"
@@ -49,7 +51,10 @@
     "files": [
       "src/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/onnxruntime-node/bin/napi-v*/linux/**",
+      "!node_modules/onnxruntime-node/bin/napi-v*/darwin/**",
+      "!node_modules/onnxruntime-node/bin/napi-v*/win32/arm64/**"
     ],
     "extraResources": [
       {
@@ -62,7 +67,11 @@
     ],
     "asarUnpack": [
       "node_modules/@napi-rs/canvas/**",
-      "node_modules/ffmpeg-static/**"
+      "node_modules/ffmpeg-static/**",
+      "node_modules/onnxruntime-node/**",
+      "node_modules/onnxruntime-common/**",
+      "src/sync/**",
+      "assets/models/**"
     ],
     "win": {
       "target": "nsis",

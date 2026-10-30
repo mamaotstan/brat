@@ -31,6 +31,18 @@ const spawnFfmpeg = (config, outputPath) => {
         '-i', '-', // Read from stdin
     ];
 
+    // v2: mux the track (or a fragment of it) under the video
+    const audio = (!config.isPreview && config.audio && config.audio.path) ? config.audio : null;
+    if (audio) {
+        if (audio.start > 0) args.push('-ss', String(audio.start));
+        if (audio.duration > 0) args.push('-t', String(audio.duration));
+        // No -shortest: the audio is cut to the clip length already, and -shortest can make
+        // ffmpeg stop reading frames early (the renderer would then wait on a closed pipe).
+        args.push('-i', audio.path, '-map', '0:v:0', '-map', '1:a:0');
+        if (config.exportFormat === 'mov_prores') args.push('-c:a', 'pcm_s16le');
+        else args.push('-c:a', 'aac', '-b:a', '192k');
+    }
+
     if (config.exportFormat === 'mov_prores' && !config.isPreview) {
         // High quality ProRes 4444 with Alpha Channel
         args.push(
@@ -67,7 +79,7 @@ const spawnFfmpeg = (config, outputPath) => {
         );
     }
 
-    const ffmpeg = spawn(ffmpegPath, args);
+    const ffmpeg = spawn(ffmpegPath, args, { windowsHide: true });
 
     ffmpeg.stderr.on('data', (data) => {
         // Uncomment for detailed ffmpeg logs

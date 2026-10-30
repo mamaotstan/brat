@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Трек + текст (v2)</title>
+    <style>
+        @font-face { font-family: 'Arial Narrow'; src: url('../../assets/fonts/ARIALN.TTF'); font-weight: 100 900; }
+        @font-face { font-family: 'Impact'; src: url('../../assets/fonts/impact.ttf'); font-weight: 100 900; }
+        @font-face { font-family: 'Monotype Corsiva'; src: url('../../assets/fonts/Monotype-Corsiva-Regular.ttf'); font-weight: 100 900; }
+
+        :root {
+            --bg-base: #09090b;
+            --bg-card: #18181b;
+            --bg-hover: #27272a;
+            --border: #3f3f46;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #8ece00;
+            --accent-hover: #a3e635;
+            --danger: #ef4444;
+            --warn: #f59e0b;
+            --radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            grid-template-rows: 1fr 230px;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ---------- sidebar ---------- */
+        .sidebar {
+            grid-row: 1;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+        h1 .badge { font-size: 11px; color: #000; background: var(--accent); border-radius: 6px; padding: 2px 6px; }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; }
+        .card-title b { color: var(--accent); margin-right: 6px; }
+        .muted { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+        .row { display: flex; gap: 8px; align-items: center; }
+        .row > * { flex: 1; }
+
+        button {
+            background: var(--bg-hover);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+
+        button:hover { border-color: var(--text-muted); }
+        button:disabled { opacity: 0.45; cursor: default; }
+        button.primary { background: var(--accent); color: #000; border: none; font-weight: 600; }
+        button.primary:hover { background: var(--accent-hover); }
+        button.on { border-color: var(--accent); color: var(--accent); }
+        button.small { padding: 5px 8px; font-size: 12px; flex: 0 0 auto; }
+
+        input[type="text"], input[type="number"], select, textarea {
+            background: var(--bg-base);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 9px;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+            user-select: text;
+        }
+
+        input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 150px; line-height: 1.45; font-size: 14px; }
+        label.lbl { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px; }
+
+        .file-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .progress { height: 6px; border-radius: 3px; background: var(--bg-hover); overflow: hidden; display: none; }
+        .progress > div { height: 100%; width: 0; background: var(--accent); transition: width 0.15s linear; }
+        .status { font-size: 12px; color: var(--text-muted); min-height: 16px; line-height: 1.4; }
+        .status.err { color: var(--danger); }
+        .status.warn { color: var(--warn); }
+        .kbd { display: inline-block; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 11px; color: var(--text-main); }
+
+        .drag-pill {
+            cursor: grab; display: inline-flex; align-items: center; gap: 4px;
+            background: rgba(0, 255, 68, 0.1); border: 1px solid rgba(0, 255, 68, 0.3);
+            padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--text-main);
+        }
+
+        /* ---------- preview ---------- */
+        .preview {
+            grid-row: 1;
+            grid-column: 2;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 18px 60px;
+            background-color: #111;
+            background-image: linear-gradient(45deg, #161616 25%, transparent 25%), linear-gradient(-45deg, #161616 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #161616 75%), linear-gradient(-45deg, transparent 75%, #161616 75%);
+            background-size: 24px 24px;
+            background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+            overflow: hidden;
+        }
+
+        .preview.light { background-color: #ddd; background-image: none; }
+
+        #previewCanvas { max-width: 100%; max-height: 100%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+
+        .transport {
+            position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; align-items: center;
+            background: rgba(24, 24, 27, 0.9); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px;
+        }
+
+        .transport .time { font-variant-numeric: tabular-nums; font-size: 13px; min-width: 120px; text-align: center; }
+        .transport select { width: auto; padding: 4px 6px; font-size: 12px; }
+
+        .empty-hint {
+            position: absolute; color: var(--text-main); font-size: 14px; text-align: center; line-height: 1.6; pointer-events: none;
+            background: rgba(9, 9, 11, 0.82); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px;
+        }
+
+        .tap-banner {
+            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            background: rgba(142, 206, 0, 0.15); border: 1px solid var(--accent); border-radius: 10px;
+            padding: 8px 14px; font-size: 13px; display: none; text-align: center;
+        }
+
+        .tap-banner b { color: var(--accent); }
+
+        /* ---------- timeline ---------- */
+        .timeline {
+            grid-column: 1 / 3;
+            grid-row: 2;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tl-head { display: flex; align-items: center; gap: 12px; padding: 7px 14px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+        .tl-head input[type=range] { width: 140px; accent-color: var(--accent); }
+        .tl-head .spacer { flex: 1; }
+
+        .tl-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; background: #0d0d10; }
+        .tl-scroll::-webkit-scrollbar { height: 10px; }
+        .tl-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+        .tl-content { position: relative; height: 100%; }
+
+        #waveCanvas { position: absolute; left: 0; top: 18px; height: calc(100% - 18px); pointer-events: none; }
+        #rulerCanvas { position: absolute; left: 0; top: 0; height: 18px; pointer-events: none; }
+
+        .clip-shade { position: absolute; top: 18px; bottom: 0; background: rgba(0, 0, 0, 0.55); pointer-events: none; }
+        .clip-edge { position: absolute; top: 18px; bottom: 0; width: 2px; background: var(--accent); pointer-events: none; opacity: 0.8; }
+
+        .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #ef4444; pointer-events: none; z-index: 20; }
+
+        .lane { position: absolute; left: 0; right: 0; height: 30px; }
+        .lane.l0 { top: 40px; }
+        .lane.l1 { top: 76px; }
+
+        .chip {
+            position: absolute; height: 28px; top: 0;
+            border-left: 2px solid var(--accent);
+            background: rgba(142, 206, 0, 0.16);
+            color: var(--text-main);
+            font-size: 12px; line-height: 28px;
+            padding: 0 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: clip;
+            cursor: ew-resize;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .chip.alt { border-left-color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
+        .chip.sel { outline: 2px solid #fff; z-index: 5; }
+        .chip.next-tap { box-shadow: inset 0 0 0 2px var(--warn); }
+        .chip.untimed { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.15); }
+        .chip.active { background: rgba(142, 206, 0, 0.45); }
+        .chip.alt.active { background: rgba(56, 189, 248, 0.45); }
+
+        .tl-help { position: absolute; left: 14px; bottom: 8px; font-size: 11px; color: var(--text-muted); pointer-events: none; }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <h1>Трек + текст <span class="badge">v2</span></h1>
+
+        <div class="card">
+            <div class="card-title"><b>1</b>Трек</div>
+            <button id="pickAudioBtn">Выбрать аудио или видео…</button>
+            <div class="file-name muted" id="audioName">Файл не выбран</div>
+            <div class="row">
+                <div><label class="lbl">Отрывок: от (сек)</label><input type="number" id="clipStart" step="0.1" min="0" value="0"></div>
+                <div><label class="lbl">до (сек)</label><input type="number" id="clipEnd" step="0.1" min="0" value="0"></div>
+                <button class="small" id="wholeTrackBtn" title="Весь трек" style="align-self:flex-end">Весь</button>
+            </div>
+            <div class="muted">Отрывок можно выделить мышью прямо на волне внизу.</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><b>2</b>Текст</div>
+            <textarea id="lyrics" placeholder="Вставь текст этого отрывка.&#10;Одна строка = один экран.&#10;&#10;снова я не высыпаюсь&#10;..."></textarea>
+            <div class="muted">Текст должен совпадать с тем, что звучит в отрывке.</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><b>3</b>Тайминги</div>
+            <button class="primary" id="autoBtn">⚡ Расставить автоматически</button>
+            <div class="progress" id="alignProgress"><div></div></div>
+            <div class="status" id="alignStatus">Распознавание работает на твоём компьютере, без интернета.</div>
+            <div class="row">
+                <button id="tapBtn" title="Протыкать слова вручную под музыку">👆 Тап-режим</button>
+                <button id="cancelBtn" style="display:none">Отмена</button>
+            </div>
+            <div>
+                <label class="lbl">Сдвинуть все слова (мс): минус — раньше</label>
+                <div class="row">
+                    <button class="small" data-shift="-50">−50</button>
+                    <input type="number" id="offsetMs" value="0" step="10">
+                    <button class="small" data-shift="50">+50</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><b>4</b>Видео</div>
+            <div class="muted" id="styleSummary">Шрифт, цвета, эффекты и формат берутся из главного окна.</div>
+            <button class="primary" id="renderBtn">▶ Рендер видео со звуком</button>
+            <div class="progress" id="renderProgress"><div></div></div>
+            <div class="status" id="renderStatus"></div>
+        </div>
+    </div>
+
+    <div class="preview" id="previewArea">
+        <canvas id="previewCanvas" width="900" height="900"></canvas>
+        <div class="empty-hint" id="emptyHint">Выбери трек и вставь текст,<br>затем нажми «Расставить автоматически»</div>
+        <div class="tap-banner" id="tapBanner">Жми <span class="kbd">F</span> / <span class="kbd">J</span> / <span class="kbd">Enter</span> на каждом слове · следующее: <b id="tapNext">—</b> · <span class="kbd">Пробел</span> пауза</div>
+        <div class="transport">
+            <button class="small" id="toStartBtn" title="В начало отрывка">⏮</button>
+            <button class="small primary" id="playBtn" title="Пробел">▶</button>
+            <div class="time" id="timeLabel">0:00.00 / 0:00.00</div>
+            <select id="rateSel" title="Скорость воспроизведения">
+                <option value="1">1×</option>
+                <option value="0.75">0.75×</option>
+                <option value="0.5">0.5×</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="timeline">
+        <div class="tl-head">
+            <span>Таймлайн</span>
+            <span>Масштаб</span><input type="range" id="zoom" min="20" max="600" value="120">
+            <span class="spacer"></span>
+            <span id="tlInfo"></span>
+        </div>
+        <div class="tl-scroll" id="tlScroll">
+            <div class="tl-content" id="tlContent">
+                <canvas id="rulerCanvas"></canvas>
+                <canvas id="waveCanvas"></canvas>
+                <div class="clip-shade" id="shadeL"></div>
+                <div class="clip-shade" id="shadeR"></div>
+                <div class="clip-edge" id="edgeL"></div>
+                <div class="clip-edge" id="edgeR"></div>
+                <div class="lane l0" id="lane0"></div>
+                <div class="lane l1" id="lane1"></div>
+                <div class="playhead" id="playhead"></div>
+            </div>
+            <div class="tl-help">Клик — перемотка · тяни слово — сдвиг · Shift+тяни — вся строка · ←/→ — точная подстройка выбранного слова</div>
+        </div>
+    </div>
+
+    <audio id="audio" preload="auto"></audio>
+
+    <!-- shared modules (CommonJS files loaded into the page) -->
+    <script>window.module = { exports: {} };</script>
+    <script src="../layout.js"></script>
+    <script>window.BratLayout = module.exports; window.module = { exports: {} };</script>
+    <script src="../sync/text.js"></script>
+    <script>window.BratText = module.exports; delete window.module;</script>
+    <script src="../sync/draw.js"></script>
+    <script src="sync.js"></script>
+</body>
+
+</html>
