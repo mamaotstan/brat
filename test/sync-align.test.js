@@ -56,3 +56,20 @@ test('too much text for the clip is reported, not crammed', async () => {
     const { logits, V } = makeProblem(6, [3, 4, 5, 6, 7], ys);
     await assert.rejects(() => transducerAlign({ T: 6, U: 5, ys, logits, vocab: V, minFrame: 3 }));
 });
+
+test('pieces of one word stay together: the first piece does not break away into the pause before it', async () => {
+    // one word of 3 pieces; piece 1 has a slightly stronger false peak early (frame 5, e.g. music
+    // in the pause) than its true place (frame 28), pieces 2 and 3 are clear at 30 and 32
+    const ys = [1, 2, 3], V = 4, T = 40;
+    const peaks = { 5: [1, 4.5], 28: [1, 4.0], 30: [2, 6], 32: [3, 6] };
+    const logits = async (rows) => {
+        const out = new Float32Array(rows.length * V);
+        rows.forEach(([t], i) => { out[i * V] = 3; const pk = peaks[t]; if (pk) out[i * V + pk[0]] += pk[1]; });
+        return out;
+    };
+    const free = await transducerAlign({ T, U: 3, ys, logits, vocab: V });
+    assert.deepStrictEqual(Array.from(free), [5, 30, 32]); // the old behaviour
+    const stay = Float64Array.from([0, 0.15, 0.15, 0]);   // waiting inside the word costs 0.15 per frame
+    const kept = await transducerAlign({ T, U: 3, ys, logits, vocab: V, stay });
+    assert.deepStrictEqual(Array.from(kept), [28, 30, 32]);
+});

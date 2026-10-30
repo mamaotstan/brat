@@ -25,6 +25,8 @@
  *                                  (biased towards lagging paths, kept for experiments only)
  * @param {Int32Array} [p.bandLo]   optional per-frame limits on the state (tokens emitted
  * @param {Int32Array} [p.bandHi]   before frame t), length T + 1; see coarseAlign()
+ * @param {Float64Array} [p.stay]   cost (nats) of one blank frame in state u (u tokens emitted);
+ *                                  used to keep the pieces of one word together
  * @param {number} [p.batchFrames=8] frames per joiner call in exact mode
  * @param {(done: number) => void} [p.onProgress] fraction 0..1
  * @returns {Promise<Int32Array>} emission frame of every token
@@ -47,6 +49,7 @@ async function transducerAlign(p) {
     // The states that can still finish: u <= t (one token per frame after minFrame)
     // and U - u <= T - t (enough frames left), optionally narrowed to a band.
     const bandLo = p.bandLo, bandHi = p.bandHi;
+    const stay = p.stay || null;
     const lo = (t) => Math.max(0, U - (T - t), bandLo ? bandLo[Math.min(t, T)] : 0);
     const hi = (t) => Math.min(U, Math.max(0, t - minFrame), bandHi ? bandHi[Math.min(t, T)] : U);
 
@@ -66,7 +69,7 @@ async function transducerAlign(p) {
             const s = score[u];
             if (s <= NEG / 2) continue;
             const [lb, ly] = logsoftmaxPick(out, (base + i) * V, u < U ? ys[u] : -1);
-            const vb = s + lb;
+            const vb = s + lb - (stay ? stay[u] : 0);
             if (vb > next[u]) { next[u] = vb; back[t * (U + 1) + u] = 0; }
             if (u < U && t >= minFrame) {
                 const ve = s + ly;
@@ -134,12 +137,14 @@ async function transducerAlign(p) {
  * @param {number} p.vocab
  * @param {number} [p.blank=0]
  * @param {number} [p.minFrame=0]
+ * @param {Float64Array} [p.stay]   see transducerAlign
  * @returns {Int32Array} path[t] = tokens emitted before frame t (length T + 1)
  */
 function coarseAlign(p) {
     const { T, U, ys, rows, vocab: V } = p;
     const blank = p.blank || 0;
     const minFrame = p.minFrame || 0;
+    const stay = p.stay || null;
     const NEG = -1e30;
     const path = new Int32Array(T + 1);
     if (U === 0) return path;
@@ -162,7 +167,7 @@ function coarseAlign(p) {
         for (let u = lo; u <= hi; u++) {
             const sc = score[u];
             if (sc <= NEG / 2) continue;
-            const vb = sc + lb;
+            const vb = sc + lb - (stay ? stay[u] : 0);
             if (vb > next[u]) { next[u] = vb; back[t * (U + 1) + u] = 0; }
             if (u < U && t >= minFrame) {
                 const ve = sc + rows[off + ys[u]] - lse;

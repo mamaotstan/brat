@@ -16,7 +16,13 @@ const { transducerAlign, coarseAlign, bandAround, pathFromEmit, touchesBand } = 
 
 const SAMPLE_RATE = 16000;
 const PAD_SEC = 0.5;          // silence added on both sides (the model misbehaves on the very first frames)
-const MIN_FRAME = 3;          // no token in the first 3 frames (= inside the padding)
+const MIN_FRAME = 0;          // (alignment runs only over frames of the real audio, see below)
+// Cost (nats) of every 40 ms frame of waiting between the first and the second piece of a word.
+// Without it a word's first piece could break away into the pause before its line: "снимаю"
+// started 1.4 s before "ни-ма-ю", "куски" at 0 s on a track whose vocal starts at ~0.8 s.
+// Only the first gap: penalising every gap inside words broke held notes (excerpt MAE 131 -> 173 ms).
+// With it: 79 excerpts within 0.3 s 93.2% -> 93.4%, 8 full songs 91.8% -> 93.0%.
+const IN_WORD_WAIT = 0.15;
 const FRAME_SEC = 0.04;       // encoder frame = 4 feature frames of 10 ms
 const CHUNK_FRAMES = 1800;    // the exported encoder accepts up to ~2000 feature frames
 const CHUNK_CONTEXT = 200;    // overlap on each side of a chunk
@@ -145,11 +151,26 @@ class AlignEngine {
         const feats = computeFbank(padded);
         onProgress('features', 1);
 
-        const enc = await this.encode(feats, (f) => onProgress('encoder', f));
+        const full = await this.encode(feats, (f) => onProgress('encoder', f));
+        // The padding is there to give the encoder context, never for words: align only over
+        // frames of the real audio.
+        let f0 = 0, f1 = full.frames;
+        while (f0 < f1 && full.times[f0] < PAD_SEC - 0.02) f0++;
+        while (f1 > f0 && full.times[f1 - 1] > PAD_SEC + duration) f1--;
+        const enc = { data: full.data.subarray(f0 * full.dim, f1 * full.dim), frames: f1 - f0, dim: full.dim, times: full.times.slice(f0, f1) };
         const T = enc.frames, U = ys.length;
         if (T - MIN_FRAME < U) throw new Error('Текста больше, чем помещается в этот отрывок. Проверь, что текст соответствует звуку.');
 
         const dec = await this.decoderStates(ys);
+        // waiting cost between pieces of one word (state u = u pieces emitted)
+        const stay = new Float64Array(U + 1);
+        const wait = this.inWordWait !== undefined ? this.inWordWait : IN_WORD_WAIT;
+        const tokWord = new Int32Array(U);
+        wordTok.forEach((w, i) => { for (let k = w.first; k <= w.last; k++) tokWord[k] = i; });
+        for (let u = 1; u < U; u++) {
+            // only after the first piece of a word; between words and later inside a word waiting is free
+            if (tokWord[u - 1] === tokWord[u] && (u < 2 || tokWord[u - 2] !== tokWord[u])) stay[u] = wait;
+        }
         const ort = this.ort;
         const E = enc.dim, D = dec.dim;
         const vocab = this.tokenizer.pieces.length;
@@ -190,12 +211,12 @@ class AlignEngine {
                 rows.set(res[this.joiner.outputNames[0]].data, t0 * vocab);
                 onProgress('align', 0.15 * (t0 + n) / T);
             }
-            const path = coarseAlign({ T, U, ys, rows, vocab, blank: 0, minFrame: MIN_FRAME });
+            const path = coarseAlign({ T, U, ys, rows, vocab, blank: 0, minFrame: MIN_FRAME, stay });
             band = bandAround(path, U, forceBand ? this.bandOverride : bandWidth(U));
         }
         const p0 = useBand ? 0.15 : 0, p1 = useBand ? 0.8 : 1;
         let emit = await transducerAlign({
-            T, U, ys, logits, vocab, blank: 0, minFrame: MIN_FRAME,
+            T, U, ys, logits, vocab, blank: 0, minFrame: MIN_FRAME, stay,
             bandLo: band.bandLo, bandHi: band.bandHi,
             onProgress: (f) => onProgress('align', p0 + (p1 - p0) * f),
         });
@@ -208,7 +229,7 @@ class AlignEngine {
             band = bandAround(path, U, forceBand ? this.bandOverride : bandWidth(U));
             const a = p1 + (1 - p1) * pass / MAX_REFINE, b = p1 + (1 - p1) * (pass + 1) / MAX_REFINE;
             emit = await transducerAlign({
-                T, U, ys, logits, vocab, blank: 0, minFrame: MIN_FRAME,
+                T, U, ys, logits, vocab, blank: 0, minFrame: MIN_FRAME, stay,
                 bandLo: band.bandLo, bandHi: band.bandHi,
                 onProgress: (f) => onProgress('align', a + (b - a) * f),
             });
