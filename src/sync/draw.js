@@ -107,6 +107,27 @@
         return text;
     }
 
+    /**
+     * Typing step before every letter, as v1 counts it: a space is a step of its own, so
+     * a letter after a space gets half the gap; the first letter gets the step of the next.
+     * Cached on the block.
+     */
+    function typingSteps(block) {
+        if (block._steps) return block._steps;
+        const ns = block.nsTimes, n = ns.length;
+        const slots = []; // 1 + spaces since the previous letter
+        let gap = 0;
+        for (const ch of block.text) {
+            if (/\s/.test(ch)) { gap++; continue; }
+            slots.push(1 + gap); gap = 0;
+        }
+        const steps = new Array(n);
+        for (let k = 1; k < n; k++) steps[k] = (ns[k] - ns[k - 1]) / (slots[k] || 1);
+        steps[0] = n > 1 ? steps[1] : Infinity;
+        block._steps = steps;
+        return steps;
+    }
+
     const isTransparent = (config) => config.exportFormat === 'mov_prores' || config.exportFormat === 'webm_preview';
 
     /**
@@ -129,10 +150,9 @@
         let shakeTrauma = 0;
         let lastKey = null;
         let cache = null; // { key, layout, chars }
-        let glide = null; // displayed letter positions/size while the text re-fits
 
         function reset() {
-            hasHistory = false; shakeTrauma = 0; lastKey = null; cache = null; glide = null;
+            hasHistory = false; shakeTrauma = 0; lastKey = null; cache = null;
             historyCtx.clearRect(0, 0, env.fullWidth, env.fullHeight);
         }
 
@@ -181,10 +201,12 @@
                     const lineYs = [...new Set(flat.map((c) => c.y))].sort((a, b) => a - b);
                     let j = 0;
                     for (const c of flat) {
-                        c.line = lineYs.indexOf(c.y);
                         if (/\s/.test(c.char)) { c.time = null; continue; }
                         c.time = block.nsTimes[j] != null ? block.nsTimes[j] : 0;
                         if (block.colors && block.colors[j]) c.color = block.colors[j];
+                        c.li = j; // letter index (spaces skipped)
+                        c.lineIdx = lineYs.indexOf(c.y);
+                        c.firstLine = c.lineIdx === 0;
                         j++;
                     }
                     cache = { key: ckey, layout: L, chars: flat };
@@ -192,40 +214,7 @@
                 layoutRes = cache.layout; chars = cache.chars;
             }
 
-            // Smooth re-fit. In the pizza style the block re-fits (shrinks) on every new letter;
-            // with sung timing that can be 15-20 times a second, and instant jumps read as
-            // shaking. Letters glide to their new place and size instead (time constant
-            // refitSec, 60 ms by default: ~80% there after 3 frames, the snap stays). When a
-            // word moves to another line the text snaps as in v1: gliding across lines overlaps.
-            let fontSize = layoutRes ? layoutRes.fontSize : 10;
-            const refitSec = config.refitSec != null ? config.refitSec : 0.06;
-            if (style === 'default' && block && chars.length && refitSec > 0) {
-                const letters = chars.filter((c) => c.time !== null);
-                const rewrapped = glide && letters.some((c, j) => j < glide.line.length && glide.line[j] !== c.line);
-                if (!glide || glide.bi !== bi || t < glide.t || t - glide.t > 0.25 || rewrapped) {
-                    glide = { bi, t, fs: fontSize, x: letters.map((c) => c.x), y: letters.map((c) => c.y), line: letters.map((c) => c.line) };
-                } else {
-                    const a = 1 - Math.exp(-(t - glide.t) / refitSec);
-                    const scale = glide.fs / fontSize;
-                    for (let j = 0; j < letters.length; j++) {
-                        const c = letters[j];
-                        if (j < glide.x.length) {
-                            glide.x[j] += (c.x - glide.x[j]) * a;
-                            glide.y[j] += (c.y - glide.y[j]) * a;
-                        } else if (j > 0) { // a new letter keeps its offset from the previous one, at the shown size
-                            const p = letters[j - 1];
-                            glide.x[j] = glide.x[j - 1] + (c.x - p.x) * scale;
-                            glide.y[j] = glide.y[j - 1] + (c.y - p.y) * scale;
-                        } else { glide.x[j] = c.x; glide.y[j] = c.y; }
-                    }
-                    glide.x.length = letters.length; glide.y.length = letters.length;
-                    glide.line = letters.map((c) => c.line);
-                    glide.fs += (fontSize - glide.fs) * a;
-                    glide.t = t;
-                }
-                fontSize = glide.fs;
-                chars = letters.map((c, j) => Object.assign({}, c, { x: glide.x[j], y: glide.y[j] }));
-            }
+            const fontSize = layoutRes ? layoutRes.fontSize : 10;
 
             // background
             ctx.save();
@@ -248,13 +237,39 @@
             ctx.font = `${fontWeight} ${fontSize}px "${fontBase}"`;
             ctx.filter = config.blur > 0 ? `blur(${config.blur}px)` : 'none';
 
+            // Pizza (default) exactly as the classic renderer:
+            // - only the newest letter animates, everything typed before it is at full opacity;
+            // - in v1 a letter becomes visible one typing step after its own start, so it is
+            //   already (step / reveal) through its fade-and-slide when it shows up: at the usual
+            //   10 letters/s it simply pops in, only faster typing shows part of the slide. Here
+            //   the step is the gap since the previous letter;
+            // - the last letter of a screen appears without the slide (v1: visibleCount < totalChars);
+            // - only on the first line of the block: v1 matches the newest letter by its index among
+            //   the laid-out characters, which skip line breaks, so from the second line on letters
+            //   simply pop in. Kept as is: with v1's own timing the frames are pixel-identical.
+            const newest = settled - 1;
+            const lastLetter = block ? block.nsTimes.length - 1 : -1;
+            const steps = block ? typingSteps(block) : null;
+            const stepBefore = (k) => steps[k];
+            // v1's start time of a letter (its index among laid-out characters, which skips one
+            // per line break, divided by the typing speed) and its "still typing" check
+            const v1Start = (c) => c.time - (1 + (c.lineIdx || 0)) * stepBefore(c.li);
+            const typingActive = !!block && (settled < block.nsTimes.length
+                || t - (block.nsTimes[lastLetter] - stepBefore(lastLetter)) < revealSec);
             const glyph = (c, tt) => {
                 // returns { opacity, xOffset, ch } for char c at time tt
                 if (c.time === null) return null;
                 const age = tt - c.time;
                 if (style === 'default') {
-                    if (age < 0) return null; // not typed yet
-                    if (age < revealSec) { const e = easeOutCubic(age / revealSec); return { opacity: e, xOffset: revealOffsetPx * (1 - e), ch: c.char }; }
+                    if (c.time > t) return null; // not typed yet (decided per frame, as in v1)
+                    if (c.li === newest && c.li < lastLetter && c.firstLine) {
+                        const progress = (age + stepBefore(c.li)) / revealSec;
+                        if (progress <= 0) return null;
+                        if (progress < 1) {
+                            const e = easeOutCubic(progress);
+                            return { opacity: e, xOffset: revealOffsetPx * (1 - e), ch: c.char };
+                        }
+                    }
                     return { opacity: 1, xOffset: 0, ch: c.char };
                 }
                 if (style === 'typewriter') return age >= 0 ? { opacity: 1, xOffset: 0, ch: c.char } : null;
@@ -291,11 +306,23 @@
                     } else { ctx.fillStyle = color; ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; }
                     ctx.fillText(g.ch, c.x + g.xOffset + dx, c.y + dy);
                 };
-                for (const c of chars) {
-                    if (c.time === null) continue;
-                    const moving = main && motionSamples > 1 && t - c.time < revealSec + frameSec && t - c.time > -revealSec;
-                    if (moving) { for (let s = 0; s < motionSamples; s++) one(c, t - (s / motionSamples) * frameSec, 1 / motionSamples); }
-                    else one(c, t, 1);
+                // Motion blur as in v1: while typing, letters not fully revealed a frame ago are drawn
+                // at several sub-frame times with partial weight; the rest once, in the same order.
+                const moving = (c) => {
+                    if (style === 'default') return t - frameSec - v1Start(c) < revealSec;
+                    return t - c.time < revealSec + frameSec && t - c.time > -revealSec;
+                };
+                if (main && motionSamples > 1 && typingActive) {
+                    for (let s = 0; s < motionSamples; s++) {
+                        const tt = t - (s / motionSamples) * frameSec;
+                        for (const c of chars) {
+                            if (c.time === null) continue;
+                            if (moving(c)) one(c, tt, 1 / motionSamples);
+                            else if (s === 0) one(c, t, 1);
+                        }
+                    }
+                } else {
+                    for (const c of chars) if (c.time !== null) one(c, t, 1);
                 }
                 // blinking cursor after the last visible letter
                 if (main && config.showCursor && block) {

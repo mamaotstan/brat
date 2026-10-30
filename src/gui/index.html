@@ -710,6 +710,11 @@
             display: none;
             pointer-events: none;
         }
+
+        .preview-area.v2-playing #batch-preview-grid,
+        .preview-area.v2-playing #preview-img {
+            visibility: hidden;
+        }
     </style>
 </head>
 
@@ -790,8 +795,8 @@
                 <div class="input-group">
                     <label><span class="v1-only">Текст</span><span class="v2-only">Текст песни</span></label>
                     <div id="inputText" class="rich-textarea" contenteditable="true">pizza generator</div>
-                    <div class="hint v2-only" style="margin-top: 4px;">🎵 Каждая строка — отдельный экран. Текст должен
-                        совпадать с тем, что поётся в треке: тайминги расставятся сами.</div>
+                    <div class="hint v2-only" style="margin-top: 4px;"><b style="color:var(--text-main);">↵ Перенос строки = новый
+                            клип.</b> Текст должен совпадать с тем, что поётся в треке: тайминги расставятся сами.</div>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">💡
                         Выделяйте отдельные слова мышкой, чтобы красить их в разные цвета</div>
                 </div>
@@ -1411,9 +1416,9 @@
         };
 
         const getTextForPreview = () => {
-            if (typeof isV2 === 'function' && isV2()) {
-                // v2: one line = one screen, show the first one
-                const lines = extractRichText(document.getElementById('inputText')).split('\n').filter((l) => l.replace(/<[^>]*>/g, '').trim());
+            if (isV2()) {
+                // v2: one line = one clip, show the first one
+                const lines = v2RichLines();
                 return lines.length ? lines[0] : '';
             }
             if (document.getElementById('batchMode').checked) {
@@ -1439,11 +1444,16 @@
                 previewArea.classList.remove('light-mode');
             }
 
-            if (isBatch) {
-                // Batch mode: render grid of previews
-                const inputs = document.querySelectorAll('.batch-inputText');
+            // Grid of previews: batch videos, or in v2 one window per clip (line of the lyrics)
+            const v2Clips = isV2() ? v2RichLines() : null;
+            const gridTexts = isBatch
+                ? Array.from(document.querySelectorAll('.batch-inputText')).map((el) => extractRichText(el) || '')
+                : (v2Clips && v2Clips.length > 1 ? v2Clips : null);
+            const gridLabel = isBatch ? 'Видео' : 'Клип';
+
+            if (gridTexts) {
                 const MAX_PREVIEWS = 6;
-                const count = Math.min(inputs.length, MAX_PREVIEWS);
+                const count = Math.min(gridTexts.length, MAX_PREVIEWS);
 
                 singleImg.style.display = 'none';
                 vid.style.display = 'none';
@@ -1472,7 +1482,7 @@
 
                 // Add missing thumbs or update existing ones
                 for (let i = 0; i < count; i++) {
-                    const text = extractRichText(inputs[i]) || '';
+                    const text = gridTexts[i];
                     let thumb = batchGrid.querySelector(`.batch-thumb[data-idx="${i}"]`);
                     let img;
 
@@ -1495,6 +1505,7 @@
                     } else {
                         img = thumb.querySelector('img');
                     }
+                    thumb.querySelector('.thumb-label').textContent = `${gridLabel} ${i + 1}`;
 
                     // Generate preview async (image stays visible while loading)
                     window.electronAPI.generatePreview({ text, config }).then(dataUrl => {
@@ -1502,7 +1513,7 @@
                     });
                 }
 
-                if (inputs.length > MAX_PREVIEWS) {
+                if (gridTexts.length > MAX_PREVIEWS) {
                     const more = document.createElement('div');
                     more.className = 'batch-thumb batch-more';
                     more.style.alignItems = 'center';
@@ -1510,11 +1521,11 @@
                     more.style.color = 'var(--text-muted)';
                     more.style.fontSize = '14px';
                     more.style.fontWeight = '500';
-                    more.textContent = `+${inputs.length - MAX_PREVIEWS} ещё`;
+                    more.textContent = `+${gridTexts.length - MAX_PREVIEWS} ещё`;
                     batchGrid.appendChild(more);
                 }
 
-                statusParams.innerHTML = ''; // Очищаем статус
+                if (!v2Busy) statusParams.innerHTML = ''; // Очищаем статус
             } else {
                 // Single mode
                 batchGrid.classList.remove('active');
@@ -1528,7 +1539,7 @@
                     singleImg.src = dataUrl;
                     vid.style.opacity = '0';
                     singleImg.style.opacity = '1';
-                    statusParams.innerHTML = ''; // Очищаем статус при изменении параметров
+                    if (!v2Busy) statusParams.innerHTML = ''; // Очищаем статус при изменении параметров
                 }
             }
         };
@@ -1988,6 +1999,11 @@
         // minus = text earlier than the voice
         const v2Offset = () => (parseInt(syncOffset.value, 10) || 0) / 1000;
 
+        // Lines of the lyrics with their colour tags: one line = one clip (screen)
+        function v2RichLines() {
+            return (extractRichText(document.getElementById('inputText')) || '').split('\n').filter((l) => l.replace(/<[^>]*>/g, '').trim());
+        }
+
         // --- lyrics: clean text for the aligner + colours of every non-space letter, per line ---
         function v2Lyrics() {
             const raw = extractRichText(document.getElementById('inputText')) || '';
@@ -2007,7 +2023,7 @@
         }
 
         // --- timings ---
-        let v2Busy = false;
+        var v2Busy = false;
         function showBusy(text, frac) {
             const pct = frac != null ? ` ${Math.round(frac * 100)}%` : '';
             statusParams.innerHTML = `${spinner} ${escapeHtml(text)}${pct} <span class="cancel-link" data-cancel="1">отмена</span>`;
@@ -2062,6 +2078,7 @@
             cancelAnimationFrame(v2Raf);
             paudio.pause();
             pcv.style.display = 'none';
+            document.querySelector('.preview-area').classList.remove('v2-playing');
             document.getElementById('preview-img').style.opacity = '1';
             setFab(false);
         }
@@ -2094,6 +2111,7 @@
                 return;
             }
             v2.playing = true; setFab(true);
+            document.querySelector('.preview-area').classList.add('v2-playing');
             document.getElementById('preview-video').style.opacity = '0';
             document.getElementById('preview-img').style.opacity = '0';
             pcv.style.display = 'block';
