@@ -115,7 +115,8 @@ autoUpdater.on('error', (err) => {
 ipcMain.handle('get-preset', () => presets);
 
 // Get app version
-ipcMain.handle('get-version', () => app.getVersion());
+// Test builds started by the launcher show their commit next to the version
+ipcMain.handle('get-version', () => app.getVersion() + (process.env.BRAT_TEST_BUILD ? ` · тест ${process.env.BRAT_TEST_BUILD}` : ''));
 
 // Pick color from screen (native eyedropper for outside app window)
 ipcMain.handle('pick-screen-color', async () => {
