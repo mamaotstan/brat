@@ -628,18 +628,15 @@ ipcMain.handle('close-timeline', () => {
     }
 });
 
-// --- V2: TRACK + LYRICS (auto-sync) ---------------------------------------
-// A separate window: the user loads a track, pastes the lyrics, the aligner
-// (offline, in a low-priority child process) places every word, and the video
-// is rendered with the main window's style and the track muxed in.
+// --- V2: TRACK + TEXT (auto-sync) -----------------------------------------
+// A mode of the main window: the user loads a track and types the lyrics, the
+// aligner (offline, in a low-priority child process) places every word, and the
+// video is rendered with the usual style settings and the track muxed in.
 
-let syncWindow = null;
-let latestMainConfig = null;
 let syncJob = null;          // running auto-sync { cancel }
 let syncRenderToken = null;  // running render { cancelled }
 
 const PLAYABLE_EXT = new Set(['.mp3', '.wav', '.ogg', '.oga', '.opus', '.flac', '.m4a', '.aac', '.mp4', '.m4v', '.webm', '.mov']);
-const syncProjectFile = () => path.join(app.getPath('userData'), 'sync-project.json');
 
 /** Path, playable URL, name and duration of an audio/video file. Formats Chromium cannot play are converted to WAV once. */
 async function describeAudio(filePath) {
@@ -663,53 +660,8 @@ async function describeAudio(filePath) {
     return { path: playable, original: filePath, url: pathToFileURL(playable).href, name: path.basename(filePath), duration };
 }
 
-function createSyncWindow() {
-    if (syncWindow) {
-        if (syncWindow.isMinimized()) syncWindow.restore();
-        syncWindow.focus();
-        return;
-    }
-    syncWindow = new BrowserWindow({
-        width: 1280,
-        height: 860,
-        minWidth: 1000,
-        minHeight: 680,
-        title: 'Трек + текст (v2)',
-        icon: path.join(__dirname, '../../assets/icon.png'),
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-            webSecurity: false, // play local audio files
-        },
-        backgroundColor: '#09090b',
-    });
-    syncWindow.setMenuBarVisibility(false);
-    syncWindow.autoHideMenuBar = true;
-    syncWindow.loadFile(path.join(__dirname, 'sync.html'));
-    syncWindow.on('closed', () => {
-        syncWindow = null;
-        if (syncJob) { syncJob.cancel(); syncJob = null; }
-        if (syncRenderToken) syncRenderToken.cancelled = true;
-    });
-}
-
-ipcMain.handle('open-sync', (event, config) => {
-    if (config) latestMainConfig = config;
-    createSyncWindow();
-    if (process.env.APTABASE_APP_KEY) aptabase.trackEvent('open_sync');
-    return { success: true };
-});
-
-// The main window reports its style on every change; the v2 window follows it live.
-ipcMain.on('main-config', (event, config) => {
-    latestMainConfig = config;
-    if (syncWindow && !syncWindow.isDestroyed()) syncWindow.webContents.send('main-config', config);
-});
-ipcMain.handle('get-main-config', () => latestMainConfig);
-
 ipcMain.handle('sync-pick-audio', async () => {
-    const { filePaths } = await dialog.showOpenDialog(syncWindow || mainWindow, {
+    const { filePaths } = await dialog.showOpenDialog(mainWindow, {
         title: 'Выбери трек',
         properties: ['openFile'],
         filters: [
@@ -723,11 +675,6 @@ ipcMain.handle('sync-pick-audio', async () => {
 
 ipcMain.handle('sync-audio-info', async (event, filePath) => {
     try { return await describeAudio(filePath); } catch (e) { return { error: e.message }; }
-});
-
-ipcMain.handle('sync-waveform', async (event, filePath) => {
-    const { waveformPeaks } = require('../sync/audio');
-    return waveformPeaks(filePath, { bucketSec: 0.01 });
 });
 
 ipcMain.handle('sync-align', async (event, job) => {
@@ -759,22 +706,13 @@ ipcMain.handle('sync-cancel', () => {
     return { success: true };
 });
 
-ipcMain.handle('sync-save-project', async (event, project) => {
-    try { await fs.writeJson(syncProjectFile(), project); } catch (e) { log.warn('sync project not saved', e); }
-    return { success: true };
-});
-
-ipcMain.handle('sync-load-project', async () => {
-    try { return await fs.readJson(syncProjectFile()); } catch (e) { return null; }
-});
-
 ipcMain.handle('sync-render', async (event, { project, config }) => {
     try {
         const ext = config.exportFormat === 'mov_prores' ? 'mov' : 'mp4';
         const base = String(project.name || 'track').replace(/\.[^.]+$/, '').replace(/[^a-zA-Zа-яА-ЯёЁ0-9_-]+/g, '_').slice(0, 60) || 'track';
         const defaultDir = path.join(app.getPath('documents'), '2pizza');
         fs.ensureDirSync(defaultDir);
-        const { filePath } = await dialog.showSaveDialog(syncWindow || mainWindow, {
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
             buttonLabel: 'Сохранить видео',
             defaultPath: getUniqueOutputPath(path.join(defaultDir, `${base}_lyrics.${ext}`)),
             filters: [{ name: ext === 'mov' ? 'MOV Video (ProRes with Alpha)' : 'MP4 Video', extensions: [ext] }],

@@ -40,3 +40,25 @@ test('prefixByLetters skips spaces', () => {
     assert.strictEqual(prefixByLetters('я не сплю', 3), 'я не');
     assert.strictEqual(prefixByLetters('я не сплю', 0), '');
 });
+
+test('a short word is typed over the gap to the next word, not popped in at once', () => {
+    // the model often marks a one-token word as only 80 ms long
+    const s = buildSchedule([{ words: [{ text: 'тебя', start: 1.0, end: 1.08 }, { text: 'люблю', start: 1.5 }] }], { duration: 3 });
+    const t = s.blocks[0].nsTimes;
+    assert.ok(t[3] - t[0] >= 0.25, `letters of "тебя" spread over ${((t[3] - t[0]) * 1000).toFixed(0)} ms`);
+    assert.strictEqual(t[4], 1.5); // the next word still starts on its beat
+});
+
+test('never more than one new letter per frame', () => {
+    const s = buildSchedule([{ words: [{ text: 'скороговорка', start: 1.0 }, { text: 'да', start: 1.1 }] }], { duration: 3 });
+    const t = s.blocks[0].nsTimes;
+    for (let i = 1; i < t.length; i++) assert.ok(t[i] - t[i - 1] >= 1 / 30 - 1e-9);
+});
+
+test('per-letter colours of a line are carried to the screen', () => {
+    const colors = [null, null, '#ff3366', '#ff3366'];
+    const s = buildSchedule([{ colors, words: [{ text: 'ab', start: 1 }, { text: 'cd', start: 1.5 }] }]);
+    assert.deepStrictEqual(s.blocks[0].colors, colors);
+    const wrong = buildSchedule([{ colors: ['#fff'], words: [{ text: 'ab', start: 1 }] }]);
+    assert.strictEqual(wrong.blocks[0].colors, null);
+});

@@ -8,6 +8,10 @@
     <!-- Use Inter font for a modern look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        @font-face { font-family: 'Arial Narrow'; src: url('../../assets/fonts/ARIALN.TTF'); }
+        @font-face { font-family: 'Impact'; src: url('../../assets/fonts/impact.ttf'); }
+        @font-face { font-family: 'Monotype Corsiva'; src: url('../../assets/fonts/Monotype-Corsiva-Regular.ttf'); }
+
         :root {
             --bg-base: #09090b;
             --bg-card: #18181b;
@@ -356,48 +360,137 @@
             background-color: var(--border);
         }
 
-        /* v2 entry: track + lyrics */
-        .v2-entry {
-            justify-content: flex-start;
-            text-align: left;
-            gap: 12px;
-            padding: 12px 14px;
-            margin-bottom: 4px;
-            background: linear-gradient(135deg, rgba(142, 206, 0, 0.16), rgba(142, 206, 0, 0.04));
-            border: 1px solid rgba(142, 206, 0, 0.45);
+        /* --- Mode switch: text (v1) / track + text (v2) --- */
+        .mode-switch {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: -8px;
+        }
+
+        .mode-switch .mode-thumb {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            background: var(--accent);
+            border-radius: 9px;
+            transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        body.mode-v2 .mode-switch .mode-thumb {
+            transform: translateX(100%);
+        }
+
+        .mode-switch button {
+            position: relative;
+            z-index: 1;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 9px 6px;
+            font-size: 13px;
+            border-radius: 9px;
+            transition: color 0.2s;
+        }
+
+        .mode-switch button.active {
+            color: #000;
+        }
+
+        .mode-switch button:not(.active):hover {
             color: var(--text-main);
         }
 
-        .v2-entry:hover {
-            border-color: var(--accent);
-            transform: translateY(-1px);
+        body:not(.mode-v2) .v2-only {
+            display: none !important;
         }
 
-        .v2-entry svg {
+        body.mode-v2 .v1-only {
+            display: none !important;
+        }
+
+        /* --- v2: track --- */
+        .track-zone {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            background: var(--bg-base);
+            cursor: pointer;
+            transition: border-color var(--transition), background var(--transition);
+        }
+
+        .track-zone:hover,
+        .track-zone.drag {
+            border-color: var(--accent);
+            background: rgba(142, 206, 0, 0.06);
+        }
+
+        .track-zone.loaded {
+            border-style: solid;
+        }
+
+        .track-zone svg {
             color: var(--accent);
             flex: 0 0 auto;
         }
 
-        .v2-entry .v2-text {
+        .track-info {
             display: flex;
             flex-direction: column;
             gap: 2px;
-            flex: 1;
+            min-width: 0;
         }
 
-        .v2-entry .v2-text span {
-            font-size: 12px;
-            font-weight: 400;
+        .track-info b {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-info span {
+            font-size: 11px;
             color: var(--text-muted);
         }
 
-        .v2-entry .v2-badge {
+        details.v2-fine summary {
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        details.v2-fine summary:hover {
+            color: var(--text-main);
+        }
+
+        details.v2-fine .fine-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .hint {
             font-size: 11px;
-            font-weight: 700;
-            background: var(--accent);
-            color: #000;
-            border-radius: 6px;
-            padding: 2px 6px;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        .status-text .cancel-link {
+            color: var(--text-muted);
+            text-decoration: underline;
+            cursor: pointer;
+            margin-left: 4px;
         }
 
         button:disabled {
@@ -587,7 +680,8 @@
         }
 
         #preview-img,
-        #preview-video {
+        #preview-video,
+        #preview-canvas {
             position: absolute;
             top: 0;
             left: 0;
@@ -608,6 +702,12 @@
         #preview-video {
             z-index: 3;
             opacity: 0;
+            pointer-events: none;
+        }
+
+        #preview-canvas {
+            z-index: 4;
+            display: none;
             pointer-events: none;
         }
     </style>
@@ -632,20 +732,12 @@
             </div>
         </div>
 
-        <!-- v2: track + lyrics with auto-sync (opens its own window, uses the style set below) -->
-        <button id="openSyncBtn" class="v2-entry" title="Загрузи отрывок трека и текст — слова сами встанут под вокал">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 18V5l12-2v13"></path>
-                <circle cx="6" cy="18" r="3"></circle>
-                <circle cx="18" cy="16" r="3"></circle>
-            </svg>
-            <div class="v2-text">
-                <b>Трек + текст</b>
-                <span>Слова сами встают под вокал</span>
-            </div>
-            <span class="v2-badge">v2</span>
-        </button>
+        <!-- Mode: plain text (v1) / text synced to a track (v2). Everything below is shared. -->
+        <div class="mode-switch" role="tablist">
+            <div class="mode-thumb"></div>
+            <button type="button" id="modeV1" class="active" role="tab">Текст</button>
+            <button type="button" id="modeV2" role="tab">Трек + текст</button>
+        </div>
 
         <!-- 1. Content Card -->
         <div class="card">
@@ -658,10 +750,48 @@
                 Содержимое
             </div>
 
+            <!-- v2: the track -->
+            <div class="input-group v2-only">
+                <label>Трек</label>
+                <div id="trackZone" class="track-zone" tabindex="0" title="Выбрать файл или перетащить его сюда">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18V5l12-2v13"></path>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                    <div class="track-info">
+                        <b id="trackName">Выбери или перетащи трек</b>
+                        <span id="trackMeta">mp3, wav, m4a, flac или видео</span>
+                    </div>
+                </div>
+                <details class="v2-fine">
+                    <summary>Тонкая настройка</summary>
+                    <div class="fine-body">
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Взять трек с (сек)</label>
+                                <input type="number" id="clipStart" min="0" step="0.1" value="0">
+                            </div>
+                            <div class="input-group">
+                                <label>по (сек)</label>
+                                <input type="number" id="clipEnd" min="0" step="0.1" placeholder="до конца">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Текст раньше / позже голоса <span id="syncOffsetVal" style="color:var(--text-main);">0 мс</span></label>
+                            <input type="range" id="syncOffset" min="-300" max="300" step="10" value="0">
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <div id="text-input-container">
                 <div class="input-group">
-                    <label>Текст</label>
+                    <label><span class="v1-only">Текст</span><span class="v2-only">Текст песни</span></label>
                     <div id="inputText" class="rich-textarea" contenteditable="true">pizza generator</div>
+                    <div class="hint v2-only" style="margin-top: 4px;">🎵 Каждая строка — отдельный экран. Текст должен
+                        совпадать с тем, что поётся в треке: тайминги расставятся сами.</div>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">💡
                         Выделяйте отдельные слова мышкой, чтобы красить их в разные цвета</div>
                 </div>
@@ -738,7 +868,7 @@
                 </label>
             </label>
 
-            <label class="toggle-label">
+            <label class="toggle-label v1-only">
                 <div>
                     Пакетный рендер
                     <span class="desc">Создать отдельное видео для каждой строчки текста</span>
@@ -774,7 +904,12 @@
                 Движение и Оптика
             </div>
 
-            <div class="input-group">
+            <div class="input-group v2-only">
+                <label>Скорость печати <span style="color:var(--text-main);">под вокал</span></label>
+                <div class="hint">В режиме «Трек + текст» буквы печатаются, пока звучит слово.</div>
+            </div>
+
+            <div class="input-group v1-only">
                 <label>Скорость печати <span id="speedValSpan" style="color:var(--text-main);">10 симв/с</span></label>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <input type="range" id="speedRange" min="1" max="60" value="10">
@@ -943,7 +1078,7 @@
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
-                    Рендер Видео
+                    <span id="renderLabel">Рендер Видео</span>
                 </button>
             </div>
             <div class="status-text" id="status">Готово</div>
@@ -987,22 +1122,30 @@
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span>Рендеринг анимации...</span>
+                <span id="loaderText">Рендеринг анимации...</span>
             </div>
             <button id="previewFab" class="preview-fab">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
+                    <path id="previewFabIcon" d="M8 5v14l11-7z" />
                 </svg>
-                Предпросмотр
+                <span id="previewFabLabel">Предпросмотр</span>
             </button>
             <img id="preview-img" src="" alt="Static Outline Preview">
             <video id="preview-video" muted playsinline></video>
+            <canvas id="preview-canvas" width="900" height="900"></canvas>
+            <audio id="preview-audio" preload="auto"></audio>
             <div id="batch-preview-grid"></div>
         </div>
     </div>
 
 
     </div>
+
+    <!-- shared with the video renderer: text layout and the v2 frame painter (CommonJS files loaded into the page) -->
+    <script>window.module = { exports: {} };</script>
+    <script src="../layout.js"></script>
+    <script>window.BratLayout = module.exports; delete window.module;</script>
+    <script src="../sync/draw.js"></script>
 
     <script>
         // Init App Version
@@ -1268,6 +1411,11 @@
         };
 
         const getTextForPreview = () => {
+            if (typeof isV2 === 'function' && isV2()) {
+                // v2: one line = one screen, show the first one
+                const lines = extractRichText(document.getElementById('inputText')).split('\n').filter((l) => l.replace(/<[^>]*>/g, '').trim());
+                return lines.length ? lines[0] : '';
+            }
             if (document.getElementById('batchMode').checked) {
                 const inputs = document.querySelectorAll('.batch-inputText');
                 return inputs.length > 0 ? extractRichText(inputs[0]) : "";
@@ -1277,8 +1425,6 @@
 
         const updateStaticPreview = async () => {
             const config = getConfig();
-            // keep the v2 window (track + lyrics) in sync with this style
-            window.electronAPI.pushMainConfig(config);
             const isBatch = document.getElementById('batchMode').checked;
             const batchGrid = document.getElementById('batch-preview-grid');
             const singleImg = document.getElementById('preview-img');
@@ -1376,7 +1522,7 @@
                 singleImg.style.display = '';
                 vid.style.display = '';
 
-                const text = extractRichText(document.getElementById('inputText')) || '';
+                const text = getTextForPreview() || '';
                 const dataUrl = await window.electronAPI.generatePreview({ text, config });
                 if (dataUrl) {
                     singleImg.src = dataUrl;
@@ -1395,6 +1541,7 @@
 
         // Event listener for manual animated preview
         document.getElementById('previewFab').addEventListener('click', () => {
+            if (isV2()) { if (v2.playing) stopV2Preview(); else playV2Preview(); return; }
             requestLiveVideo(getTextForPreview(), getConfig());
         });
 
@@ -1675,6 +1822,7 @@
         let isRendering = false;
         document.getElementById('renderBtn').addEventListener('click', async () => {
             if (isRendering) return;
+            if (isV2()) { renderV2(); return; }
 
             let text;
             const config = getConfig();
@@ -1742,10 +1890,6 @@
 
 
 
-        document.getElementById('openSyncBtn').addEventListener('click', () => {
-            window.electronAPI.openSync(getConfig());
-        });
-
         openTimelineBtn.addEventListener('click', () => {
             const inputs = document.querySelectorAll('.batch-inputText');
             const texts = Array.from(inputs).map(i => extractRichText(i)).filter(t => t.trim().length > 0);
@@ -1756,6 +1900,258 @@
 
             window.electronAPI.openTimeline({ texts, config: getConfig() });
         });
+
+        // ================= v2: TRACK + TEXT =================
+        // Same window and settings; the text is typed in sync with the singer.
+        // Timings are placed automatically (offline, in a background process) the first time
+        // you press "Предпросмотр" or "Рендер", and reused until the track or the text changes.
+
+        var appMode = 'v1';
+        const Draw = window.BratSyncDraw;
+        const v2 = { track: null, sync: null, playing: false };
+        const store = {
+            get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+            set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* not critical */ } },
+        };
+        function isV2() { return appMode === 'v2'; }
+        const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const spinner = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="spin" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"></circle></svg>`;
+
+        function setMode(mode) {
+            if (mode === appMode) return;
+            stopV2Preview();
+            appMode = mode;
+            document.body.classList.toggle('mode-v2', isV2());
+            document.getElementById('modeV1').classList.toggle('active', !isV2());
+            document.getElementById('modeV2').classList.toggle('active', isV2());
+            const batch = document.getElementById('batchMode');
+            if (isV2() && batch.checked) { batch.checked = false; batch.dispatchEvent(new Event('change')); }
+            store.set('2pizza.mode', appMode);
+            statusParams.textContent = isV2() && !v2.track ? 'Выбери трек и вставь текст песни' : '';
+            handleControlChange();
+        }
+        document.getElementById('modeV1').addEventListener('click', () => setMode('v1'));
+        document.getElementById('modeV2').addEventListener('click', () => setMode('v2'));
+
+        // --- track ---
+        const fmtTime = (sec) => { const m = Math.floor(sec / 60); return `${m}:${(sec - m * 60).toFixed(1).padStart(4, '0')}`; };
+        function showTrack() {
+            document.getElementById('trackZone').classList.toggle('loaded', !!v2.track);
+            document.getElementById('trackName').textContent = v2.track ? v2.track.name : 'Выбери или перетащи трек';
+            document.getElementById('trackMeta').textContent = v2.track ? `${fmtTime(v2.track.duration)} · нажми, чтобы сменить` : 'mp3, wav, m4a, flac или видео';
+        }
+        function loadTrack(info, quiet) {
+            if (!info) return;
+            if (info.error) { if (!quiet) statusParams.innerHTML = `<span style="color:var(--danger)">${escapeHtml(info.error)}</span>`; return; }
+            stopV2Preview();
+            v2.track = info; v2.sync = null;
+            store.set('2pizza.track', info.original || info.path);
+            if (!quiet) {
+                document.getElementById('clipStart').value = 0;
+                document.getElementById('clipEnd').value = '';
+                statusParams.textContent = 'Трек загружен. Вставь текст песни и жми «Предпросмотр» или «Рендер»';
+            }
+            showTrack();
+        }
+        const pickTrack = () => window.electronAPI.syncPickAudio().then((info) => loadTrack(info));
+        const trackZone = document.getElementById('trackZone');
+        trackZone.addEventListener('click', pickTrack);
+        trackZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickTrack(); } });
+        // a file dropped anywhere in the window becomes the track (in v2); never let Electron navigate to it
+        const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+        window.addEventListener('dragover', (e) => { if (!hasFiles(e)) return; e.preventDefault(); if (isV2()) trackZone.classList.add('drag'); });
+        window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) trackZone.classList.remove('drag'); });
+        window.addEventListener('drop', (e) => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            trackZone.classList.remove('drag');
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+            if (!isV2()) setMode('v2');
+            const filePath = window.electronAPI.getPathForFile(file);
+            if (filePath) window.electronAPI.syncAudioInfo(filePath).then((info) => loadTrack(info));
+        });
+
+        const clipRange = () => {
+            const dur = v2.track ? v2.track.duration : 0;
+            let a = Math.max(0, parseFloat(document.getElementById('clipStart').value) || 0);
+            let b = parseFloat(document.getElementById('clipEnd').value);
+            if (!(b > 0) || b > dur) b = dur;
+            if (a > b - 0.5) a = 0; // nonsense range: the whole track
+            return { start: +a.toFixed(3), end: +b.toFixed(3) };
+        };
+        const syncOffset = document.getElementById('syncOffset');
+        syncOffset.addEventListener('input', () => {
+            const v = parseInt(syncOffset.value, 10) || 0;
+            document.getElementById('syncOffsetVal').textContent = (v > 0 ? '+' : '') + v + ' мс';
+        });
+        // minus = text earlier than the voice
+        const v2Offset = () => (parseInt(syncOffset.value, 10) || 0) / 1000;
+
+        // --- lyrics: clean text for the aligner + colours of every non-space letter, per line ---
+        function v2Lyrics() {
+            const raw = extractRichText(document.getElementById('inputText')) || '';
+            const { cleanText, colorMap } = window.BratLayout.extractTextAndColors(raw);
+            const colorAt = new Map(colorMap.map((c) => [c.charIdx, c.color]));
+            const lines = [];
+            let off = 0;
+            for (const line of cleanText.split('\n')) {
+                if (line.trim()) {
+                    const colors = [];
+                    for (let i = 0; i < line.length; i++) if (!/\s/.test(line[i])) colors.push(colorAt.get(off + i) || null);
+                    lines.push({ colors: colors.some(Boolean) ? colors : null });
+                }
+                off += line.length + 1;
+            }
+            return { text: cleanText, lines };
+        }
+
+        // --- timings ---
+        let v2Busy = false;
+        function showBusy(text, frac) {
+            const pct = frac != null ? ` ${Math.round(frac * 100)}%` : '';
+            statusParams.innerHTML = `${spinner} ${escapeHtml(text)}${pct} <span class="cancel-link" data-cancel="1">отмена</span>`;
+            document.getElementById('loaderText').textContent = text + pct;
+            document.getElementById('preview-loader').classList.add('active');
+        }
+        function hideBusy() {
+            document.getElementById('preview-loader').classList.remove('active');
+            document.getElementById('loaderText').textContent = 'Рендеринг анимации...';
+        }
+        statusParams.addEventListener('click', (e) => { if (e.target.dataset && e.target.dataset.cancel) window.electronAPI.syncCancel(); });
+        window.electronAPI.onSyncProgress((p) => { if (v2Busy) showBusy('Слушаю трек…', p.value); });
+        window.electronAPI.onSyncRenderProgress((v) => { if (v2Busy) showBusy('Рендер…', v); });
+
+        async function ensureSync() {
+            if (!v2.track) throw new Error('Сначала выбери трек');
+            const lyr = v2Lyrics();
+            if (!lyr.lines.length) throw new Error('Вставь текст песни');
+            const clip = clipRange();
+            const key = JSON.stringify([v2.track.path, clip.start, clip.end, lyr.text]);
+            if (v2.sync && v2.sync.key === key) return v2.sync;
+            showBusy('Слушаю трек…', 0);
+            const res = await window.electronAPI.syncAlign({ audioPath: v2.track.path, start: clip.start, duration: clip.end - clip.start, lyrics: lyr.text });
+            if (!res || !res.success) throw new Error(res && res.error ? res.error : 'не удалось расставить тайминги');
+            v2.sync = { key, clip, lines: res.result.lines, warnings: res.result.warnings || [] };
+            return v2.sync;
+        }
+        // lines for the painter / renderer: aligned words + the current colours
+        function v2ProjectLines(sync) {
+            const lyr = v2Lyrics();
+            return sync.lines.map((l, i) => ({
+                text: l.text,
+                colors: lyr.lines[i] ? lyr.lines[i].colors : null,
+                words: l.words.map((w) => ({ text: w.text, start: w.start, end: w.end })),
+            }));
+        }
+        const warnHtml = (sync) => sync.warnings && sync.warnings.length
+            ? `<div style="color:#fbbf24; text-align:center;">⚠ ${escapeHtml(sync.warnings.join(' '))}</div>` : '';
+
+        // --- preview: the synced animation drawn live in the window, with the track playing ---
+        const pcv = document.getElementById('preview-canvas');
+        const pctx = pcv.getContext('2d');
+        const paudio = document.getElementById('preview-audio');
+        let v2Raf = 0;
+        function setFab(playing) {
+            document.getElementById('previewFabLabel').textContent = playing ? 'Стоп' : 'Предпросмотр';
+            document.getElementById('previewFabIcon').setAttribute('d', playing ? 'M6 6h12v12H6z' : 'M8 5v14l11-7z');
+        }
+        function stopV2Preview() {
+            if (!v2.playing) return;
+            v2.playing = false;
+            cancelAnimationFrame(v2Raf);
+            paudio.pause();
+            pcv.style.display = 'none';
+            document.getElementById('preview-img').style.opacity = '1';
+            setFab(false);
+        }
+        async function playV2Preview() {
+            if (v2Busy || isRendering) return;
+            let sync;
+            v2Busy = true;
+            try { sync = await ensureSync(); } catch (e) {
+                v2Busy = false; hideBusy();
+                statusParams.innerHTML = `<span style="color:var(--danger)">${escapeHtml(e.message)}</span>`;
+                return;
+            }
+            v2Busy = false; hideBusy();
+            statusParams.innerHTML = warnHtml(sync);
+            const cfg = getConfig();
+            cfg.width = parseInt(cfg.width, 10) || 900; cfg.height = parseInt(cfg.height, 10) || 900;
+            cfg.fps = parseInt(cfg.fps, 10) || 30; cfg.isPreview = true;
+            await document.fonts.load(`${cfg.fontWeight} 48px "${cfg.fontFamily}"`).catch(() => { });
+            pcv.width = cfg.width; pcv.height = cfg.height;
+            const dur = sync.clip.end - sync.clip.start;
+            const schedule = Draw.buildSchedule(v2ProjectLines(sync), { duration: dur, offset: v2Offset() });
+            const painter = Draw.createSyncPainter({
+                createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+                canvas: pcv, fullWidth: cfg.width, fullHeight: cfg.height,
+            });
+            if (paudio.dataset.src !== v2.track.url) { paudio.src = v2.track.url; paudio.dataset.src = v2.track.url; }
+            paudio.currentTime = sync.clip.start;
+            try { await paudio.play(); } catch (e) {
+                statusParams.innerHTML = `<span style="color:var(--danger)">Не удалось воспроизвести трек: ${escapeHtml(e.message)}</span>`;
+                return;
+            }
+            v2.playing = true; setFab(true);
+            document.getElementById('preview-video').style.opacity = '0';
+            document.getElementById('preview-img').style.opacity = '0';
+            pcv.style.display = 'block';
+            const loop = () => {
+                if (!v2.playing) return;
+                const t = paudio.currentTime - sync.clip.start;
+                if (t >= dur || paudio.ended) { stopV2Preview(); return; }
+                painter.drawFrame(pctx, schedule, Math.max(0, t), cfg);
+                v2Raf = requestAnimationFrame(loop);
+            };
+            loop();
+        }
+
+        // --- render with the track ---
+        async function renderV2() {
+            if (v2Busy || isRendering) return;
+            stopV2Preview();
+            isRendering = true; v2Busy = true;
+            const btn = document.getElementById('renderBtn');
+            btn.disabled = true;
+            try {
+                const sync = await ensureSync();
+                showBusy('Рендер…', 0);
+                const res = await window.electronAPI.syncRender({
+                    project: { audioPath: v2.track.path, start: sync.clip.start, end: sync.clip.end, lines: v2ProjectLines(sync), offset: v2Offset(), name: v2.track.name },
+                    config: getConfig(),
+                });
+                if (res && res.success) {
+                    const p = res.outputPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    statusParams.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div>✅ Готово!</div>
+                    <div draggable="true"
+                            style="cursor: grab; display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 255, 68, 0.1); border: 1px solid rgba(0, 255, 68, 0.3); padding: 4px 10px; border-radius: 6px; user-select: none;"
+                            ondragstart="event.preventDefault(); window.electronAPI.startDrag('${p}');"
+                            title="Потяните этот файл в CapCut или папку">Перетащить файл</div>
+                </div>${warnHtml(sync)}</div>`;
+                } else if (res && (res.reason === 'cancelled' || res.error === 'Рендер отменён')) {
+                    statusParams.textContent = 'Рендер отменён';
+                } else {
+                    statusParams.innerHTML = `<span style="color:var(--danger)">Ошибка: ${escapeHtml(res && res.error || 'неизвестно')}</span>`;
+                }
+            } catch (e) {
+                statusParams.innerHTML = `<span style="color:var(--danger)">${escapeHtml(e.message)}</span>`;
+            } finally {
+                hideBusy();
+                btn.disabled = false;
+                isRendering = false; v2Busy = false;
+            }
+        }
+
+        // restore the last mode and track
+        (() => {
+            const savedTrack = store.get('2pizza.track', '');
+            if (savedTrack) window.electronAPI.syncAudioInfo(savedTrack).then((info) => loadTrack(info, true)).catch(() => { });
+            if (store.get('2pizza.mode', 'v1') === 'v2') setMode('v2');
+        })();
 
     </script>
 </body>

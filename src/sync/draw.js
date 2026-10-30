@@ -17,7 +17,6 @@
     const { calculateLayout, getFlatCharacterPositions } = layout;
 
     const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
-    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
     /**
      * @param {Array<{ text?: string, words: Array<{ text: string, start: number, end?: number }> }>} lines
@@ -25,15 +24,22 @@
      * @param {number} [o.duration]   clip length (s)
      * @param {number} [o.clearGap=3] if the singer pauses longer than this, the screen is cleared
      * @param {number} [o.hold=1.2]   how long a line stays after its last word before such a pause
-     * @param {number} [o.perChar=0.07] max seconds per letter while typing a word
+     * @param {number} [o.perChar=0.09] slowest typing: seconds per letter (v1 default is 0.1)
+     * @param {number} [o.minGap=1/30] at most one new letter per this many seconds
      * @param {number} [o.offset=0]   global shift of all timings (s)
+     *
+     * Letters of a word are spread over the whole gap until the next word (but not slower
+     * than perChar), not just over the sung part: typing the word only while the model
+     * hears it made short words pop in within 2-3 frames (36% of letters < 67 ms apart,
+     * bursts of 25 letters/s on 15 test clips; now 22% and 19/s, word starts unchanged).
+     * Lines may carry `colors`: one CSS colour (or null) per non-space letter.
      */
     function buildSchedule(lines, o = {}) {
         const clearGap = o.clearGap != null ? o.clearGap : 3;
         const hold = o.hold != null ? o.hold : 1.2;
-        const perChar = o.perChar != null ? o.perChar : 0.07;
+        const perChar = o.perChar != null ? o.perChar : 0.09;
+        const minGap = o.minGap != null ? o.minGap : 1 / 30;
         const offset = o.offset || 0;
-        const minChar = 1 / 60;
 
         // flatten + enforce order
         const blocks = [];
@@ -48,7 +54,9 @@
                 const e = typeof w.end === 'number' && isFinite(w.end) ? Math.max(s + 0.05, w.end + offset) : null;
                 return { text: String(w.text).trim().replace(/\s+/g, ' '), start: s, end: e };
             });
-            blocks.push({ words: ws });
+            const nLetters = ws.reduce((n, w) => n + w.text.replace(/\s+/g, '').length, 0);
+            const colors = Array.isArray(line.colors) && line.colors.length === nLetters && words.length === line.words.length ? line.colors : null;
+            blocks.push({ words: ws, colors });
         }
 
         for (let b = 0; b < blocks.length; b++) {
@@ -60,10 +68,10 @@
                 const letters = w.text.replace(/\s+/g, '');
                 const L = letters.length;
                 const nextStart = i + 1 < ws.length ? ws[i + 1].start : nextBlockStart;
-                const sungEnd = w.end != null ? w.end : w.start + 0.12 + L * perChar;
-                const window = clamp(Math.min(nextStart, sungEnd) - w.start, minChar, 0.12 + L * perChar);
+                const window = Math.max(0, Math.min(nextStart - w.start, L * perChar));
                 for (let k = 0; k < L; k++) nsTimes.push(w.start + (L > 1 ? window * k / L : 0));
             });
+            for (let k = 1; k < nsTimes.length; k++) nsTimes[k] = Math.max(nsTimes[k], nsTimes[k - 1] + minGap);
             const last = ws[ws.length - 1];
             const lastEnd = Math.max(nsTimes[nsTimes.length - 1], last.end != null ? last.end : last.start + 0.3);
             let end;
@@ -121,9 +129,10 @@
         let shakeTrauma = 0;
         let lastKey = null;
         let cache = null; // { key, layout, chars }
+        let glide = null; // displayed letter positions/size while the text re-fits
 
         function reset() {
-            hasHistory = false; shakeTrauma = 0; lastKey = null; cache = null;
+            hasHistory = false; shakeTrauma = 0; lastKey = null; cache = null; glide = null;
             historyCtx.clearRect(0, 0, env.fullWidth, env.fullHeight);
         }
 
@@ -169,14 +178,53 @@
                     const originX = (width - L.blockWidth) / 2;
                     const originY = (height - L.blockHeight) / 2;
                     const flat = getFlatCharacterPositions(ctx, L.lines, originX, originY, L.fontSize, lineHeight, fontBase, fontWeight, L.blockWidth, textAlign, []);
+                    const lineYs = [...new Set(flat.map((c) => c.y))].sort((a, b) => a - b);
                     let j = 0;
                     for (const c of flat) {
+                        c.line = lineYs.indexOf(c.y);
                         if (/\s/.test(c.char)) { c.time = null; continue; }
-                        c.time = block.nsTimes[j] != null ? block.nsTimes[j] : 0; j++;
+                        c.time = block.nsTimes[j] != null ? block.nsTimes[j] : 0;
+                        if (block.colors && block.colors[j]) c.color = block.colors[j];
+                        j++;
                     }
                     cache = { key: ckey, layout: L, chars: flat };
                 }
                 layoutRes = cache.layout; chars = cache.chars;
+            }
+
+            // Smooth re-fit. In the pizza style the block re-fits (shrinks) on every new letter;
+            // with sung timing that can be 15-20 times a second, and instant jumps read as
+            // shaking. Letters glide to their new place and size instead (time constant
+            // refitSec, 60 ms by default: ~80% there after 3 frames, the snap stays). When a
+            // word moves to another line the text snaps as in v1: gliding across lines overlaps.
+            let fontSize = layoutRes ? layoutRes.fontSize : 10;
+            const refitSec = config.refitSec != null ? config.refitSec : 0.06;
+            if (style === 'default' && block && chars.length && refitSec > 0) {
+                const letters = chars.filter((c) => c.time !== null);
+                const rewrapped = glide && letters.some((c, j) => j < glide.line.length && glide.line[j] !== c.line);
+                if (!glide || glide.bi !== bi || t < glide.t || t - glide.t > 0.25 || rewrapped) {
+                    glide = { bi, t, fs: fontSize, x: letters.map((c) => c.x), y: letters.map((c) => c.y), line: letters.map((c) => c.line) };
+                } else {
+                    const a = 1 - Math.exp(-(t - glide.t) / refitSec);
+                    const scale = glide.fs / fontSize;
+                    for (let j = 0; j < letters.length; j++) {
+                        const c = letters[j];
+                        if (j < glide.x.length) {
+                            glide.x[j] += (c.x - glide.x[j]) * a;
+                            glide.y[j] += (c.y - glide.y[j]) * a;
+                        } else if (j > 0) { // a new letter keeps its offset from the previous one, at the shown size
+                            const p = letters[j - 1];
+                            glide.x[j] = glide.x[j - 1] + (c.x - p.x) * scale;
+                            glide.y[j] = glide.y[j - 1] + (c.y - p.y) * scale;
+                        } else { glide.x[j] = c.x; glide.y[j] = c.y; }
+                    }
+                    glide.x.length = letters.length; glide.y.length = letters.length;
+                    glide.line = letters.map((c) => c.line);
+                    glide.fs += (fontSize - glide.fs) * a;
+                    glide.t = t;
+                }
+                fontSize = glide.fs;
+                chars = letters.map((c, j) => Object.assign({}, c, { x: glide.x[j], y: glide.y[j] }));
             }
 
             // background
@@ -197,7 +245,7 @@
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, marginX + shakeX, marginY + shakeY);
             ctx.textBaseline = 'top';
-            ctx.font = `${fontWeight} ${layoutRes ? layoutRes.fontSize : 10}px "${fontBase}"`;
+            ctx.font = `${fontWeight} ${fontSize}px "${fontBase}"`;
             ctx.filter = config.blur > 0 ? `blur(${config.blur}px)` : 'none';
 
             const glyph = (c, tt) => {
