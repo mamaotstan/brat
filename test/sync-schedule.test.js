@@ -27,7 +27,7 @@ test('letters of a word are typed while it is sung, never before it starts', () 
     assert.strictEqual(b.nsTimes.length, 'высыпаюсь'.length);
     assert.strictEqual(b.nsTimes[0], 2.2);
     for (let i = 1; i < b.nsTimes.length; i++) assert.ok(b.nsTimes[i] > b.nsTimes[i - 1]);
-    assert.ok(b.nsTimes[b.nsTimes.length - 1] < 3.0);
+    assert.ok(b.nsTimes[b.nsTimes.length - 1] <= 3.0 + 1e-9);
 });
 
 test('global offset shifts everything; out-of-order words are kept in order', () => {
@@ -49,10 +49,14 @@ test('a short word is typed over the gap to the next word, not popped in at once
     assert.strictEqual(t[4], 1.5); // the next word still starts on its beat
 });
 
-test('never more than one new letter per frame', () => {
-    const s = buildSchedule([{ words: [{ text: 'скороговорка', start: 1.0 }, { text: 'да', start: 1.1 }] }], { duration: 3 });
-    const t = s.blocks[0].nsTimes;
-    for (let i = 1; i < t.length; i++) assert.ok(t[i] - t[i - 1] >= 1 / 30 - 1e-9);
+test('the text changes at most every 0.1 s, like v1 at its default speed; fast words come in bigger steps', () => {
+    const s = buildSchedule([{ words: [{ text: 'скороговорка', start: 1.0 }, { text: 'да', start: 1.1 }, { text: 'ну', start: 1.6 }] }], { duration: 3 });
+    const b = s.blocks[0];
+    const updates = [...new Set(b.nsTimes)];
+    for (let i = 1; i < updates.length; i++) assert.ok(updates[i] - updates[i - 1] >= 0.1 - 1e-9);
+    for (let i = 1; i < b.nsTimes.length; i++) assert.ok(b.nsTimes[i] >= b.nsTimes[i - 1]);
+    assert.strictEqual(b.nsTimes[b.nsTimes.length - 2], 1.6); // a word is never shown before it is sung
+    assert.ok(b.pop);
 });
 
 test('per-letter colours of a line are carried to the screen', () => {

@@ -2115,9 +2115,14 @@
             document.getElementById('preview-video').style.opacity = '0';
             document.getElementById('preview-img').style.opacity = '0';
             pcv.style.display = 'block';
+            // Smooth clock: audio.currentTime advances in coarse steps, so frames are timed by
+            // performance.now() and re-locked to the audio only when they drift apart.
+            let clock0 = performance.now(), audio0 = paudio.currentTime;
             const loop = () => {
                 if (!v2.playing) return;
-                const t = paudio.currentTime - sync.clip.start;
+                let a = audio0 + (performance.now() - clock0) / 1000 * (paudio.playbackRate || 1);
+                if (Math.abs(paudio.currentTime - a) > 0.08) { clock0 = performance.now(); audio0 = a = paudio.currentTime; }
+                const t = a - sync.clip.start;
                 if (t >= dur || paudio.ended) { stopV2Preview(); return; }
                 painter.drawFrame(pctx, schedule, Math.max(0, t), cfg);
                 v2Raf = requestAnimationFrame(loop);

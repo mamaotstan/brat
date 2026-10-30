@@ -24,21 +24,27 @@
      * @param {number} [o.duration]   clip length (s)
      * @param {number} [o.clearGap=3] if the singer pauses longer than this, the screen is cleared
      * @param {number} [o.hold=1.2]   how long a line stays after its last word before such a pause
-     * @param {number} [o.perChar=0.09] slowest typing: seconds per letter (v1 default is 0.1)
-     * @param {number} [o.minGap=1/30] at most one new letter per this many seconds
+     * @param {number} [o.perChar=0.1] slowest typing: seconds per letter (v1's default 10 letters/s)
+     * @param {number} [o.tick=0.1]   the text changes at most once per tick (v1 at 10 letters/s)
      * @param {number} [o.offset=0]   global shift of all timings (s)
      *
      * Letters of a word are spread over the whole gap until the next word (but not slower
      * than perChar), not just over the sung part: typing the word only while the model
-     * hears it made short words pop in within 2-3 frames (36% of letters < 67 ms apart,
-     * bursts of 25 letters/s on 15 test clips; now 22% and 19/s, word starts unchanged).
+     * hears it made short words pop in within 2-3 frames.
+     *
+     * The pizza look comes from v1's pace: at its default 10 letters/s the text re-fits at most
+     * 10 times a second and every letter appears already revealed (a clean pop). Singing is
+     * often faster; letter by letter that re-fits the text almost every frame (jerky line
+     * breaks) and catches letters mid-reveal (smeared). So letters are grouped into updates
+     * at least one tick apart (several letters per update when the singer is fast), and the
+     * blocks are marked `pop`: no fade/slide, as in v1 at its default speed.
      * Lines may carry `colors`: one CSS colour (or null) per non-space letter.
      */
     function buildSchedule(lines, o = {}) {
         const clearGap = o.clearGap != null ? o.clearGap : 3;
         const hold = o.hold != null ? o.hold : 1.2;
-        const perChar = o.perChar != null ? o.perChar : 0.09;
-        const minGap = o.minGap != null ? o.minGap : 1 / 30;
+        const perChar = o.perChar != null ? o.perChar : 0.1;
+        const tick = o.tick != null ? o.tick : 0.1;
         const offset = o.offset || 0;
 
         // flatten + enforce order
@@ -71,7 +77,12 @@
                 const window = Math.max(0, Math.min(nextStart - w.start, L * perChar));
                 for (let k = 0; k < L; k++) nsTimes.push(w.start + (L > 1 ? window * k / L : 0));
             });
-            for (let k = 1; k < nsTimes.length; k++) nsTimes[k] = Math.max(nsTimes[k], nsTimes[k - 1] + minGap);
+            // group into updates at least one tick apart (never earlier than a letter's own time)
+            for (let k = 0, lastUpdate = -Infinity; k < nsTimes.length;) {
+                const u = Math.max(nsTimes[k], lastUpdate + tick);
+                while (k < nsTimes.length && nsTimes[k] <= u + 1e-9) nsTimes[k++] = u;
+                lastUpdate = u;
+            }
             const last = ws[ws.length - 1];
             const lastEnd = Math.max(nsTimes[nsTimes.length - 1], last.end != null ? last.end : last.start + 0.3);
             let end;
@@ -84,6 +95,7 @@
             blk.start = ws[0].start;
             blk.end = Math.max(blk.start + 0.05, end);
             blk.nsTimes = nsTimes;
+            blk.pop = true;
         }
         return { blocks, duration: o.duration != null ? o.duration : (blocks.length ? blocks[blocks.length - 1].end : 0) };
     }
@@ -262,7 +274,7 @@
                 const age = tt - c.time;
                 if (style === 'default') {
                     if (c.time > t) return null; // not typed yet (decided per frame, as in v1)
-                    if (c.li === newest && c.li < lastLetter && c.firstLine) {
+                    if (!block.pop && c.li === newest && c.li < lastLetter && c.firstLine) {
                         const progress = (age + stepBefore(c.li)) / revealSec;
                         if (progress <= 0) return null;
                         if (progress < 1) {
