@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     pickScreenColor: () => ipcRenderer.invoke('pick-screen-color'),
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
     startDrag: (fileName) => ipcRenderer.send('start-drag', fileName),
+    revealFile: (filePath) => ipcRenderer.invoke('reveal-file', filePath),
     renderTimelineVideo: (data) => ipcRenderer.invoke('render-timeline-video', data),
     openTimeline: (data) => ipcRenderer.invoke('open-timeline', data),
     getTimelineData: () => ipcRenderer.invoke('get-timeline-data'),

@@ -248,6 +248,15 @@ ipcMain.handle('open-external', async (event, url) => {
     }
 });
 
+// A rendered file in Explorer (click on «Перетащить файл»)
+ipcMain.handle('reveal-file', async (event, filePath) => {
+    try {
+        if (filePath && fs.existsSync(filePath)) shell.showItemInFolder(filePath);
+    } catch (e) {
+        console.error('Failed to show file:', e);
+    }
+});
+
 // Drag and drop out of the app
 ipcMain.on('start-drag', (event, filePath) => {
     const { nativeImage } = require('electron');

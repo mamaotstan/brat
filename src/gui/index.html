@@ -866,6 +866,15 @@
 
         .st-ok svg { color: var(--accent); }
 
+        .st-file {
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
         .st-warn { flex-basis: 100%; color: var(--warn); }
 
         .drag-pill {
@@ -1395,6 +1404,37 @@
 
         const statusParams = document.getElementById('status');
 
+        // The last render: the pill drags the file(s) out (CapCut, a folder), a click shows them in Explorer.
+        // It stays until the next message, so changing a setting after a render does not take it away.
+        let lastOutput = null;
+        let ownDrag = false; // our own file is on the cursor: dropping it back into this window does nothing
+        const samePath = (a, b) => String(a).replace(/\//g, '\\').toLowerCase() === String(b).replace(/\//g, '\\').toLowerCase();
+        const isLastOutput = (p) => !!p && [].concat(lastOutput || []).some((o) => samePath(o, p));
+        function showDone(paths, label, extraHtml = '') {
+            lastOutput = paths;
+            const many = Array.isArray(paths) && paths.length > 1;
+            const one = Array.isArray(paths) ? paths[0] : paths;
+            const name = many ? `${paths.length} видео` : String(one).split(/[\\/]/).pop();
+            statusParams.innerHTML = `
+                <span class="st-ok">${okIcon} ${label}<span class="st-file" title="${escapeAttr(many ? paths.join('\n') : one)}">${escapeAttr(name)}</span></span>
+                <span class="drag-pill" draggable="true" title="Потяните ${many ? 'файлы' : 'файл'} в CapCut или в папку. Клик — показать в папке">${fileIcon} Перетащить файл${many ? 'ы' : ''}</span>${extraHtml}`;
+        }
+        function escapeAttr(t) { return String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+        statusParams.addEventListener('dragstart', (e) => {
+            if (!e.target.closest || !e.target.closest('.drag-pill') || !lastOutput) return;
+            e.preventDefault();
+            ownDrag = true;
+            window.electronAPI.startDrag(lastOutput);
+        });
+        statusParams.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('.drag-pill') || !lastOutput || !window.electronAPI.revealFile) return;
+            window.electronAPI.revealFile([].concat(lastOutput)[0]);
+        });
+        // the drag is over once the cursor is back over the window or the window is active again
+        window.addEventListener('mousemove', (e) => { if (ownDrag && e.buttons === 0) ownDrag = false; });
+        window.addEventListener('focus', () => { ownDrag = false; });
+        const clearStatus = () => { if (!statusParams.querySelector('.drag-pill')) statusParams.innerHTML = ''; };
+
         // Debounce function
         const debounce = (func, wait) => {
             let timeout;
@@ -1682,7 +1722,7 @@
                     batchGrid.appendChild(more);
                 }
 
-                if (!v2Busy) statusParams.innerHTML = ''; // Очищаем статус
+                if (!v2Busy) clearStatus(); // Очищаем статус (кроме результата рендера)
             } else {
                 // Single mode
                 batchGrid.classList.remove('active');
@@ -1696,7 +1736,7 @@
                     singleImg.src = dataUrl;
                     vid.style.opacity = '0';
                     singleImg.style.opacity = '1';
-                    if (!v2Busy) statusParams.innerHTML = ''; // Очищаем статус при изменении параметров
+                    if (!v2Busy) clearStatus(); // Очищаем статус при изменении параметров (кроме результата рендера)
                 }
             }
         };
@@ -2014,20 +2054,7 @@
             document.getElementById('renderBtn').disabled = false;
             isRendering = false;
             if (result.success) {
-                // Determine text and file paths for the pill
-                const isBatch = config.batchMode;
-                const pillText = isBatch ? 'Все видео готовы' : 'Готово';
-                // If batch, it's an array of paths that need to be escaped properly for the inline ondragstart handler
-                const pathsArg = isBatch
-                    ? `JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(result.outputPath))}'))`
-                    : `'${result.outputPath.replace(/\\/g, '\\\\')}'`;
-
-                // Inject draggable pill
-                statusParams.innerHTML = `
-                    <span class="st-ok">${okIcon} ${pillText}</span>
-                    <span class="drag-pill" draggable="true"
-                            ondragstart="event.preventDefault(); window.electronAPI.startDrag(${pathsArg});"
-                            title="Потяните ${isBatch ? 'эти файлы' : 'этот файл'} в CapCut или папку">${fileIcon} Перетащить файл${isBatch ? 'ы' : ''}</span>`;
+                showDone(result.outputPath, config.batchMode ? 'Все видео готовы:' : 'Готово:');
             } else {
                 statusParams.innerHTML = `<span style="color:var(--danger)">Ошибка: ${result.error || result.reason}</span>`;
             }
@@ -2142,16 +2169,23 @@
         trackZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickTrack(); } });
         // a file dropped anywhere in the window becomes the track (in v2); never let Electron navigate to it
         const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
-        window.addEventListener('dragover', (e) => { if (!hasFiles(e)) return; e.preventDefault(); if (isV2()) trackZone.classList.add('drag'); });
+        window.addEventListener('dragover', (e) => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            if (ownDrag) { e.dataTransfer.dropEffect = 'none'; return; }
+            if (isV2()) trackZone.classList.add('drag');
+        });
         window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) trackZone.classList.remove('drag'); });
         window.addEventListener('drop', (e) => {
             if (!hasFiles(e)) return;
             e.preventDefault();
             trackZone.classList.remove('drag');
             const file = e.dataTransfer.files[0];
-            if (!file) return;
+            const filePath = file ? window.electronAPI.getPathForFile(file) : '';
+            const own = ownDrag || isLastOutput(filePath);
+            ownDrag = false;
+            if (!file || own) return; // the video just rendered, let go over this window: nothing to do
             if (!isV2()) setMode('v2');
-            const filePath = window.electronAPI.getPathForFile(file);
             if (filePath) window.electronAPI.syncAudioInfo(filePath).then((info) => loadTrack(info));
         });
 
@@ -2315,12 +2349,7 @@
                     config: getConfig(),
                 });
                 if (res && res.success) {
-                    const p = res.outputPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    statusParams.innerHTML = `
-                    <span class="st-ok">${okIcon} Готово</span>
-                    <span class="drag-pill" draggable="true"
-                            ondragstart="event.preventDefault(); window.electronAPI.startDrag('${p}');"
-                            title="Потяните этот файл в CapCut или папку">${fileIcon} Перетащить файл</span>${warnHtml(sync)}`;
+                    showDone(res.outputPath, 'Готово:', warnHtml(sync));
                 } else if (res && (res.reason === 'cancelled' || res.error === 'Рендер отменён')) {
                     statusParams.textContent = 'Рендер отменён';
                 } else {
