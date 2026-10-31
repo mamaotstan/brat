@@ -88,8 +88,30 @@ autoUpdater.on('update-available', (info) => {
     });
 });
 
+let progressWin = null;
+
+autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+    log.info(log_message);
+
+    if (mainWindow) {
+        // We can show progress in the main window title as fallback
+        mainWindow.setTitle(`2Pizza Generator - Downloading Update... ${Math.round(progressObj.percent)}%`);
+        // Send the real progress to the renderer
+        mainWindow.webContents.send('update-progress', {
+            percent: progressObj.percent,
+            transferred: progressObj.transferred,
+            total: progressObj.total
+        });
+    }
+});
+
 autoUpdater.on('update-downloaded', (info) => {
     log.info('Update downloaded');
+
+    if (mainWindow) {
+        mainWindow.setTitle('2Pizza Generator'); // Reset title
+    }
 
     // Prompt user to install the update
     dialog.showMessageBox(mainWindow, {
@@ -106,6 +128,49 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (err) => {
     log.error('Error in auto-updater. ' + err);
+
+    if (mainWindow) {
+        mainWindow.setTitle('2Pizza Generator'); // Reset title in case it was showing progress
+    }
+
+    // Don't show error for "No published versions on GitHub" which happens natively occasionally in dev
+    if (!err.toString().includes('No published versions on GitHub') && !err.toString().includes('net::ERR_INTERNET_DISCONNECTED')) {
+        dialog.showMessageBox(mainWindow, {
+            type: 'error',
+            title: 'Ошибка обновления',
+            message: 'Не удалось загрузить обновление.',
+            detail: 'Произошла ошибка сети (возможно, VPN или блокировка провайдера). Пожалуйста, скачайте новую версию вручную с нашего GitHub.\n\nКод ошибки:\n' + err.toString().split('\n')[0],
+            buttons: ['ОК', 'Скачать вручную', 'Сбросить кэш и повторить']
+        }).then((result) => {
+            if (result.response === 1) {
+                require('electron').shell.openExternal('https://github.com/mamaotstan/brat/releases/latest');
+            } else if (result.response === 2) {
+                // Try again: clear cache and trigger update check
+                try {
+                    const localAppData = process.env.LOCALAPPDATA;
+                    if (localAppData) {
+                        const cacheDir1 = path.join(localAppData, 'brat-video-gen-updater');
+                        const cacheDir2 = path.join(localAppData, 'Brat Video Generator-updater');
+                        const cacheDir3 = path.join(localAppData, '2pizza-generator-updater'); // Just in case
+
+                        [cacheDir1, cacheDir2, cacheDir3].forEach(dir => {
+                            if (fs.existsSync(dir)) {
+                                fs.rmSync(dir, { recursive: true, force: true });
+                                log.info('Cleared updater cache: ' + dir);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    log.error('Failed to clear updater cache: ' + e);
+                }
+
+                // Trigger check again
+                setTimeout(() => {
+                    autoUpdater.checkForUpdates();
+                }, 1000);
+            }
+        });
+    }
 });
 // ----------------------------
 

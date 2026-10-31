@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getTimelineData: () => ipcRenderer.invoke('get-timeline-data'),
     saveTimelineData: (data) => ipcRenderer.invoke('save-timeline-data', data),
     closeTimeline: () => ipcRenderer.invoke('close-timeline'),
+    onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (event, data) => callback(data)),
 
     // v2: track + text
     getPathForFile: (file) => webUtils.getPathForFile(file),
