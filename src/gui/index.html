@@ -1,232 +1,307 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2Pizza Generator</title>
-    <!-- Use Inter font for a modern look -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         @font-face { font-family: 'Arial Narrow'; src: url('../../assets/fonts/ARIALN.TTF'); }
         @font-face { font-family: 'Impact'; src: url('../../assets/fonts/impact.ttf'); }
         @font-face { font-family: 'Monotype Corsiva'; src: url('../../assets/fonts/Monotype-Corsiva-Regular.ttf'); }
+        /* UI font, bundled so the window looks the same offline */
+        @font-face { font-family: 'Onest'; src: url('../../assets/ui/Onest.ttf') format('truetype'); font-weight: 100 900; }
 
         :root {
-            --bg-base: #09090b;
-            --bg-card: #18181b;
-            --bg-hover: #27272a;
-            --border: #3f3f46;
-            --text-main: #f4f4f5;
-            --text-muted: #a1a1aa;
-            --accent: #8ece00;
-            /* brat green */
-            --accent-hover: #a3e635;
-            --danger: #ef4444;
-            --radius: 12px;
-            --transition: 0.2s ease-in-out;
+            --ink: #0c0d0a;
+            --panel: #15160f;
+            --raise: #1f2119;
+            --raise-2: #2a2c22;
+            --line: #2d3026;
+            --line-2: #3d4133;
+            --text: #edf0e4;
+            --muted: #979b88;
+            --faint: #6c705f;
+            --accent: #8ace00;
+            --accent-hover: #9de01b;
+            --accent-soft: rgba(138, 206, 0, 0.14);
+            --on-accent: #0c0d0a;
+            --danger: #ff6b5e;
+            --warn: #e5c450;
+            --r-s: 8px;
+            --r: 10px;
+            --r-l: 14px;
+            --sidebar: 372px;
+            --checker-dark: repeating-conic-gradient(#1b1d16 0 25%, #131410 0 50%) 0 0 / 22px 22px;
+            --checker-light: repeating-conic-gradient(#ecece6 0 25%, #dcdcd4 0 50%) 0 0 / 22px 22px;
+            /* names still used by inline styles in the script */
+            --text-main: var(--text);
+            --text-muted: var(--muted);
+            --bg-card: var(--panel);
+            --bg-base: var(--ink);
+            --border: var(--line);
+            --bg-hover: var(--raise-2);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body { height: 100%; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            display: flex;
+            font-family: 'Onest', 'Segoe UI', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.4;
+            background: var(--ink);
+            color: var(--text);
+            display: grid;
+            grid-template-columns: var(--sidebar) minmax(0, 1fr);
             height: 100vh;
             overflow: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* --- Sidebar --- */
+        ::selection { background: rgba(138, 206, 0, 0.35); }
+
+        button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        /* ---------- sidebar ---------- */
         .sidebar {
-            width: 380px;
-            background-color: var(--bg-card);
-            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            padding: 24px;
-            gap: 24px;
+            min-height: 0;
+            background: var(--panel);
+            border-right: 1px solid var(--line);
         }
 
-        /* Custom Scrollbar */
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background-color: var(--border);
-            border-radius: 10px;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
-
-        .header svg {
-            color: var(--accent);
-            width: 28px;
-            height: 28px;
-        }
-
-        .header h1 {
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        /* --- Cards & Groups --- */
-        .card {
-            background-color: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px;
+        .sidebar-top {
+            padding: 18px 22px 16px;
             display: flex;
             flex-direction: column;
             gap: 16px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .card-title {
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            font-weight: 600;
+        .brand { display: flex; align-items: center; gap: 12px; }
+
+        /* the brat cover in miniature */
+        .brand-tile {
+            width: 46px;
+            height: 46px;
+            flex: 0 0 auto;
+            background: var(--accent);
+            border-radius: 3px;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+
+        .brand-tile span {
+            font-family: 'Arial Narrow', sans-serif;
+            font-size: 14px;
+            color: #000;
+            letter-spacing: 0;
+            filter: blur(0.4px);
+        }
+
+        .brand h1 { font-size: 15px; font-weight: 650; letter-spacing: -0.1px; line-height: 1.2; }
+
+        #app-version { display: block; font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+        /* auto-update download, under the version */
+        .update-line { align-items: center; gap: 8px; margin-top: 3px; font-size: 11.5px; color: var(--text); }
+
+        .update-line .bar { width: 72px; height: 4px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
+
+        .update-line .bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.3s ease; }
+
+        #updatePercent { font-variant-numeric: tabular-nums; }
+
+        .sidebar-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0 22px 28px;
+            scrollbar-gutter: stable;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar { width: 8px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; border: 2px solid var(--panel); }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: var(--line-2); }
+
+        .group {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            gap: 16px;
+            padding: 22px 0 24px;
+        }
+
+        .group + .group { border-top: 1px solid var(--line); }
+
+        .group-title {
+            font-family: 'Arial Narrow', sans-serif;
+            font-weight: 400;
+            font-size: 25px;
+            line-height: 1;
+            letter-spacing: -0.2px;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        /* ---------- fields ---------- */
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+
+        .input-row { display: flex; gap: 12px; }
+
+        .input-row > .input-group { flex: 1; min-width: 0; }
+
+        label {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
             gap: 8px;
         }
 
-        .card-title svg {
-            width: 16px;
-            height: 16px;
-            opacity: 0.7;
-        }
-
-        /* --- Form Elements --- */
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 12px;
-        }
-
-        .input-row>.input-group {
-            flex: 1;
-        }
-
-        label {
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 
         .rich-textarea,
         select,
-        input[type="number"] {
+        input[type="number"],
+        input[type="text"] {
             width: 100%;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 14px;
+            background: var(--ink);
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: var(--r-s);
             font-family: inherit;
-            transition: border-color var(--transition);
+            font-size: 13.5px;
             outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
+        select,
+        input[type="number"],
+        input[type="text"] { height: 38px; padding: 0 12px; }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 32px;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23979b88' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            text-overflow: ellipsis;
+        }
+
+        select option { background: var(--panel); color: var(--text); }
+
+        input[type="number"] { font-variant-numeric: tabular-nums; }
+
+        input::placeholder { color: var(--faint); }
+
         .rich-textarea {
+            padding: 11px 13px;
+            min-height: 92px;
+            font-size: 14.5px;
+            line-height: 1.5;
             resize: vertical;
-            min-height: 80px;
-            line-height: 1.4;
             overflow-y: auto;
             white-space: pre-wrap;
+            cursor: text;
         }
+
+        .rich-textarea:hover,
+        select:hover,
+        input[type="number"]:hover,
+        input[type="text"]:hover { border-color: var(--line-2); }
 
         .rich-textarea:focus,
         select:focus,
-        input[type="number"]:focus {
+        input[type="number"]:focus,
+        input[type="text"]:focus {
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
         }
 
-        /* Floating format toolbar */
-        #formatToolbar {
-            position: absolute;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 6px;
+        .hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+        .hint b { color: var(--text); font-weight: 600; }
+
+        .hint.with-icon { display: flex; gap: 8px; }
+
+        .hint.with-icon svg { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 1.5px; color: var(--faint); }
+
+        /* colour: swatch + hex + eyedropper in one well */
+        .color-field {
             display: flex;
             align-items: center;
-            gap: 6px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 100;
-        }
-
-        #formatToolbar.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        #formatToolbar input[type="color"] {
-            width: 24px;
-            height: 24px;
-            padding: 0;
-            border: none;
-            background: none;
-            cursor: pointer;
-        }
-
-        #formatToolbar button {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
+            gap: 10px;
+            height: 38px;
             padding: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
+            background: var(--ink);
+            border: 1px solid var(--line);
+            border-radius: var(--r-s);
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
-        #formatToolbar button:hover {
-            background: var(--bg-hover);
-            color: var(--text-main);
+        .color-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+        .color-field .swatch {
+            width: 28px;
+            height: 28px;
+            flex: 0 0 auto;
+            border-radius: 5px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+            cursor: pointer;
+            transition: background 0.15s;
         }
 
-        /* Range Slider Styling */
+        .color-field input[type="text"] {
+            height: 28px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .color-field input[type="text"]:focus { box-shadow: none; }
+
+        .icon-btn {
+            width: 30px;
+            height: 30px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 6px;
+            color: var(--muted);
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .icon-btn:hover { background: var(--raise-2); color: var(--accent); }
+
+        /* range: lime fill up to the value (--p is kept by the script) */
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
             width: 100%;
-            height: 4px;
-            background: var(--border);
+            height: 18px;
+            margin: 0;
+            background: linear-gradient(to right, var(--line-2), var(--line-2)) center / 100% 4px no-repeat;
+            background-image: linear-gradient(to right,
+                    var(--line-2) 0 var(--from, 0%),
+                    var(--accent) var(--from, 0%) var(--to, 0%),
+                    var(--line-2) var(--to, 0%) 100%);
             border-radius: 2px;
             outline: none;
-            margin: 10px 0;
+            cursor: pointer;
         }
 
         input[type="range"]::-webkit-slider-thumb {
@@ -235,214 +310,181 @@
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            transition: transform 0.1s;
+            background: var(--text);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+            transition: box-shadow 0.15s;
         }
 
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
+        input[type="range"]:hover::-webkit-slider-thumb,
+        input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px var(--accent-soft), 0 1px 3px rgba(0, 0, 0, 0.6); }
 
-        /* Toggle Switch Styling */
+        input[type="range"]:focus-visible { outline: none; }
+
+        /* toggles */
         .toggle-label {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--text-main);
-            font-weight: 500;
             gap: 16px;
+            cursor: pointer;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text);
         }
 
-        .toggle-label>div {
-            flex: 1;
-            min-width: 0;
-            line-height: 1.3;
-        }
+        .toggle-label > div { flex: 1; min-width: 0; line-height: 1.3; }
 
         .toggle-label span.desc {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 400;
             display: block;
-            margin-top: 2px;
+            margin-top: 3px;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--muted);
         }
 
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 22px;
-        }
+        .toggle-switch { position: relative; display: inline-block; flex: 0 0 auto; width: 38px; height: 22px; }
 
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+        .toggle-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 
         .slider-round {
             position: absolute;
+            inset: 0;
             cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: var(--bg-base);
-            border: 1px solid var(--border);
-            transition: .4s;
+            background: var(--raise-2);
             border-radius: 22px;
+            transition: background 0.2s;
         }
 
         .slider-round:before {
-            position: absolute;
             content: "";
-            height: 14px;
-            width: 14px;
+            position: absolute;
+            width: 16px;
+            height: 16px;
             left: 3px;
-            bottom: 3px;
-            background-color: var(--text-muted);
-            transition: .4s;
+            top: 3px;
             border-radius: 50%;
+            background: var(--muted);
+            transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.3, 1), background 0.2s;
         }
 
-        input:checked+.slider-round {
-            background-color: var(--accent);
-            border-color: var(--accent);
+        input:checked + .slider-round { background: var(--accent); }
+
+        input:checked + .slider-round:before { background: var(--on-accent); transform: translateX(16px); }
+
+        .toggle-switch input:focus-visible + .slider-round { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        /* settings that only exist when their parent is on */
+        .sub {
+            padding-left: 14px;
+            border-left: 2px solid var(--line);
+            gap: 12px;
         }
 
-        input:checked+.slider-round:before {
-            background-color: #000;
-            transform: translateX(18px);
-        }
+        #glitchControlsContainer .input-group + .input-group { margin-top: 12px; }
 
-        /* --- Actions --- */
-        .actions-card {
-            background: rgba(142, 206, 0, 0.05);
-            border-color: rgba(142, 206, 0, 0.2);
-        }
+        #cursorControlsContainer { align-items: flex-end; }
 
-        button {
-            display: flex;
+        /* ---------- buttons ---------- */
+        .btn-primary,
+        .btn-secondary,
+        .btn-ghost {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: 'Inter', sans-serif;
+            height: 40px;
+            padding: 0 18px;
+            border-radius: var(--r);
+            font-size: 13.5px;
             font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all var(--transition);
-            border: none;
+            white-space: nowrap;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
         }
 
-        .btn-primary {
-            background-color: var(--accent);
-            color: #000;
-        }
+        .btn-primary { background: var(--accent); color: var(--on-accent); }
 
-        .btn-primary:hover:not(:disabled) {
-            background-color: var(--accent-hover);
-            transform: translateY(-1px);
-        }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 
-        .btn-secondary {
-            background-color: var(--bg-hover);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
+        .btn-secondary { background: var(--raise); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
 
-        .btn-secondary:hover:not(:disabled) {
-            background-color: var(--border);
-        }
+        .btn-secondary:hover:not(:disabled) { background: var(--raise-2); }
 
-        /* --- Mode switch: text (v1) / track + text (v2) --- */
+        .btn-ghost { height: 36px; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+
+        .btn-ghost:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+
+        .btn-primary svg,
+        .btn-secondary svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+        button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ---------- mode switch: text (v1) / track + text (v2) ---------- */
         .mode-switch {
             position: relative;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            background: var(--bg-base);
-            border: 1px solid var(--border);
+            padding: 3px;
+            background: var(--ink);
+            border: 1px solid var(--line);
             border-radius: 12px;
-            padding: 4px;
-            margin-bottom: -8px;
         }
 
         .mode-switch .mode-thumb {
             position: absolute;
-            top: 4px;
-            bottom: 4px;
-            left: 4px;
-            width: calc(50% - 4px);
+            top: 3px;
+            bottom: 3px;
+            left: 3px;
+            width: calc(50% - 3px);
             background: var(--accent);
             border-radius: 9px;
             transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        body.mode-v2 .mode-switch .mode-thumb {
-            transform: translateX(100%);
-        }
+        body.mode-v2 .mode-switch .mode-thumb { transform: translateX(100%); }
 
         .mode-switch button {
             position: relative;
             z-index: 1;
-            background: transparent;
-            color: var(--text-muted);
-            padding: 9px 6px;
-            font-size: 13px;
+            height: 34px;
             border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
             transition: color 0.2s;
         }
 
-        .mode-switch button.active {
-            color: #000;
-        }
+        .mode-switch button.active { color: var(--on-accent); }
 
-        .mode-switch button:not(.active):hover {
-            color: var(--text-main);
-        }
+        .mode-switch button:not(.active):hover { color: var(--text); }
 
-        body:not(.mode-v2) .v2-only {
-            display: none !important;
-        }
+        body:not(.mode-v2) .v2-only { display: none !important; }
 
-        body.mode-v2 .v1-only {
-            display: none !important;
-        }
+        body.mode-v2 .v1-only { display: none !important; }
 
-        /* --- What's new in 2.0: shown on the first launch --- */
+        /* ---------- what's new in 2.0: shown on the first launch ---------- */
         #introOverlay[hidden],
         #introArrow[hidden],
-        #introBubble[hidden] {
-            display: none !important;
-        }
+        #introBubble[hidden] { display: none !important; }
 
         #introOverlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.66);
+            background: rgba(5, 6, 4, 0.7);
             z-index: 900;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
 
         body.intro-on .mode-switch {
-            position: relative;
             z-index: 901;
-            box-shadow: 0 0 0 3px rgba(142, 206, 0, 0.55), 0 0 36px rgba(142, 206, 0, 0.45);
+            box-shadow: 0 0 0 3px rgba(138, 206, 0, 0.55), 0 0 36px rgba(138, 206, 0, 0.45);
         }
 
-        body.intro-on #modeV2 {
-            animation: introPulse 1.6s ease-in-out infinite;
-        }
+        body.intro-on #modeV2 { animation: introPulse 1.6s ease-in-out infinite; }
 
         @keyframes introPulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(142, 206, 0, 0.0); }
-            50% { box-shadow: 0 0 0 5px rgba(142, 206, 0, 0.45); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(138, 206, 0, 0); }
+            50% { box-shadow: 0 0 0 5px rgba(138, 206, 0, 0.45); }
         }
 
         #introArrow {
@@ -464,802 +506,765 @@
             position: fixed;
             z-index: 902;
             width: 320px;
-            background: var(--bg-card);
-            border: 1px solid rgba(142, 206, 0, 0.7);
-            border-radius: 14px;
-            padding: 18px;
-            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
             display: flex;
             flex-direction: column;
             gap: 10px;
+            padding: 18px;
+            background: var(--panel);
+            border: 1px solid rgba(138, 206, 0, 0.7);
+            border-radius: var(--r-l);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
         body.intro-show #introOverlay,
-        body.intro-show #introArrow {
-            opacity: 1;
-        }
+        body.intro-show #introArrow { opacity: 1; }
 
-        body.intro-show #introBubble {
-            opacity: 1;
-            transform: none;
-        }
+        body.intro-show #introBubble { opacity: 1; transform: none; }
 
         #introBubble .intro-tag {
             align-self: flex-start;
-            font-size: 11px;
+            font-size: 11.5px;
             font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            color: #000;
+            color: var(--on-accent);
             background: var(--accent);
             border-radius: 6px;
             padding: 3px 8px;
         }
 
-        #introBubble .intro-title {
-            font-size: 17px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-            line-height: 1.25;
-        }
+        #introBubble .intro-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.25; }
 
-        #introBubble .intro-text {
-            font-size: 13px;
-            color: var(--text-muted);
-            line-height: 1.45;
-        }
+        #introBubble .intro-text { font-size: 13px; color: var(--muted); line-height: 1.45; }
 
-        #introBubble .intro-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-        }
+        #introBubble .intro-actions { display: flex; gap: 8px; margin-top: 4px; }
 
-        #introBubble .intro-actions button {
-            padding: 10px;
-            font-size: 13px;
-        }
+        #introBubble .intro-actions .btn-primary { flex: 1; }
 
-        #introBubble .intro-actions .btn-secondary {
-            flex: 0 0 auto;
-            width: auto;
-            padding: 10px 16px;
-        }
-
-        /* --- v2: track --- */
+        /* ---------- v2: track ---------- */
         .track-zone {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px;
-            border: 1px dashed var(--border);
-            border-radius: 8px;
-            background: var(--bg-base);
+            padding: 12px 14px;
+            border: 1px dashed var(--line-2);
+            border-radius: var(--r);
+            background: var(--ink);
             cursor: pointer;
-            transition: border-color var(--transition), background var(--transition);
+            transition: border-color 0.15s, background 0.15s;
         }
 
         .track-zone:hover,
-        .track-zone.drag {
-            border-color: var(--accent);
-            background: rgba(142, 206, 0, 0.06);
-        }
+        .track-zone.drag { border-color: var(--accent); background: rgba(138, 206, 0, 0.06); }
 
-        .track-zone.loaded {
-            border-style: solid;
-        }
+        .track-zone.loaded { border-style: solid; border-color: var(--line); }
 
-        .track-zone svg {
-            color: var(--accent);
+        .track-zone.loaded:hover { border-color: var(--accent); }
+
+        .track-zone .track-icon {
+            width: 36px;
+            height: 36px;
             flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            background: var(--raise);
+            color: var(--accent);
         }
 
-        .track-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 0;
-        }
+        .track-zone.loaded .track-icon { background: var(--accent); color: var(--on-accent); }
 
-        .track-info b {
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .track-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
-        .track-info span {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
+        .track-info b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .track-info span { font-size: 12px; color: var(--muted); }
 
         details.v2-fine summary {
-            font-size: 12px;
-            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            color: var(--muted);
             cursor: pointer;
             user-select: none;
+            list-style: none;
         }
 
-        details.v2-fine summary:hover {
-            color: var(--text-main);
+        details.v2-fine summary::-webkit-details-marker { display: none; }
+
+        details.v2-fine summary::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-right: 1.5px solid currentColor;
+            border-bottom: 1.5px solid currentColor;
+            transform: rotate(-45deg);
+            transition: transform 0.15s;
+            margin-right: 2px;
         }
 
-        details.v2-fine .fine-body {
+        details.v2-fine[open] summary::before { transform: rotate(45deg) translate(-1px, -1px); }
+
+        details.v2-fine summary:hover { color: var(--text); }
+
+        details.v2-fine .fine-body { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+
+        /* ---------- batch list ---------- */
+        #batchList { display: flex; flex-direction: column; gap: 14px; }
+
+        .batch-head { display: flex; justify-content: space-between; align-items: baseline; }
+
+        .batch-head label { color: var(--text); }
+
+        .remove-btn { font-size: 12px; color: var(--muted); }
+
+        .remove-btn:hover { color: var(--danger); }
+
+        .batch-inputText.rich-textarea { min-height: 64px; }
+
+        #addBatchBtn { margin-top: 14px; width: 100%; }
+
+        /* floating colour toolbar over selected words */
+        #formatToolbar {
+            position: absolute;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .hint {
-            font-size: 11px;
-            color: var(--text-muted);
-            line-height: 1.35;
-        }
-
-        .status-text .cancel-link {
-            color: var(--text-muted);
-            text-decoration: underline;
-            cursor: pointer;
-            margin-left: 4px;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .status-text {
-            font-size: 12px;
-            color: var(--text-muted);
-            text-align: center;
-            margin-top: -8px;
-            display: flex;
-            justify-content: center;
             align-items: center;
             gap: 6px;
-        }
-
-        .note {
-            font-size: 11px;
-            color: var(--text-muted);
-            line-height: 1.4;
-            display: flex;
-            gap: 6px;
-            background: var(--bg-base);
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-
-        .note svg {
-            width: 14px;
-            height: 14px;
-            flex-shrink: 0;
-            color: #fbbf24;
-        }
-
-        /* --- Main Preview Area --- */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--bg-base);
-            position: relative;
-        }
-
-        .preview-area {
-            flex: 1;
-            margin: 24px;
-            border-radius: 16px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            background-color: #1a1a1a;
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            transition: background-color 0.3s;
-        }
-
-        .preview-area.light-mode {
-            background-color: #e0e0e0;
-        }
-
-        /* Batch preview grid */
-        #batch-preview-grid {
-            display: none;
-            width: 100%;
-            height: 100%;
-            padding: 12px;
-            box-sizing: border-box;
-            gap: 8px;
-        }
-
-        #batch-preview-grid.active {
-            display: grid;
-        }
-
-        /* 1 item = 1 col, 2 = 2 col, 3+ = 2 col multi-row */
-        #batch-preview-grid.cols-1 {
-            grid-template-columns: 1fr;
-        }
-
-        #batch-preview-grid.cols-2 {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .batch-thumb {
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #111;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .batch-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .batch-thumb .thumb-label {
-            position: absolute;
-            top: 6px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.65);
-            color: #fff;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 10px;
-            pointer-events: none;
-        }
-
-        .preview-loader {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 8px 14px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-            font-weight: 500;
+            padding: 6px;
+            background: var(--raise);
+            border: 1px solid var(--line-2);
+            border-radius: var(--r-s);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 20;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.15s;
+            z-index: 100;
         }
 
-        .preview-loader.active {
-            opacity: 1;
-        }
+        #formatToolbar.active { opacity: 1; pointer-events: auto; }
 
-        .preview-loader svg {
-            width: 14px;
-            height: 14px;
-            animation: spin 1s linear infinite;
-        }
+        #formatToolbar input[type="color"] { width: 24px; height: 24px; padding: 0; border: none; background: none; cursor: pointer; }
 
-        .preview-fab {
-            position: absolute;
-            bottom: 16px;
-            right: 16px;
-            width: auto;
-            background: var(--accent);
-            color: #000;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 24px;
-            font-weight: 600;
-            font-size: 13px;
+        #formatToolbar button {
             display: flex;
             align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s;
-            z-index: 10;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 4px;
+            color: var(--muted);
         }
 
-        .preview-fab:hover {
-            transform: scale(1.05);
-            background: var(--accent-hover);
+        #formatToolbar button:hover { background: var(--raise-2); color: var(--text); }
+
+        /* ---------- stage: the frame and what to do with it ---------- */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            padding: 14px 28px 22px;
+            gap: 14px;
         }
 
-        .preview-fab svg {
-            width: 14px;
-            height: 14px;
+        .stage-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 32px;
         }
 
-        @keyframes spin {
-            100% {
-                transform: rotate(360deg);
-            }
+        .author-links { margin-left: auto; display: flex; gap: 4px; }
+
+        .author-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            height: 32px;
+            padding: 0 11px;
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 12.5px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
         }
 
+        .author-link svg { width: 15px; height: 15px; }
+
+        .author-link.tg svg { color: #2aabee; }
+
+        .author-link.boosty svg { color: #f15f2c; }
+
+        .author-link:hover { background: var(--raise); color: var(--text); }
+
+        .preview-loader {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            height: 32px;
+            padding: 0 13px;
+            border-radius: 16px;
+            background: var(--raise);
+            box-shadow: inset 0 0 0 1px var(--line);
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .preview-loader { opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+
+        .preview-loader.active { opacity: 1; }
+
+        .preview-loader svg { width: 14px; height: 14px; color: var(--accent); animation: spin 0.9s linear infinite; }
+
+
+        .preview-area {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            container-type: size;
+        }
+
+        /* the media boxes keep the video's own square, so the frame edge is the real edge;
+           the checkerboard is transparency (MOV) */
         #preview-img,
         #preview-video,
         #preview-canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            inset: 0;
             margin: auto;
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain;
+            background: var(--checker-dark);
+            border-radius: 4px;
+            box-shadow: 0 0 0 1px var(--line), 0 24px 60px rgba(0, 0, 0, 0.45);
             transition: opacity 0.4s ease;
         }
 
-        #preview-img {
-            z-index: 2;
-            opacity: 1;
-        }
+        #preview-img { z-index: 2; opacity: 1; }
 
-        #preview-video {
-            z-index: 3;
-            opacity: 0;
-            pointer-events: none;
-        }
+        #preview-img:not([src]),
+        #preview-img[src=""] { visibility: hidden; }
 
-        #preview-canvas {
-            z-index: 4;
-            display: none;
-            pointer-events: none;
-        }
+        #preview-video { z-index: 3; opacity: 0; pointer-events: none; }
+
+        #preview-canvas { z-index: 4; display: none; pointer-events: none; }
+
+        .preview-area.light-mode #preview-img,
+        .preview-area.light-mode #preview-video,
+        .preview-area.light-mode #preview-canvas,
+        .preview-area.light-mode .batch-thumb img { background: var(--checker-light); }
 
         .preview-area.v2-playing #batch-preview-grid,
-        .preview-area.v2-playing #preview-img {
-            visibility: hidden;
+        .preview-area.v2-playing #preview-img { visibility: hidden; }
+
+        /* several clips / batch videos: a contact sheet of frames, as wide as the frames need
+           (rows follow from the number of cells; the last cell may be «+N») */
+        #batch-preview-grid {
+            --cols: 2;
+            --rows: 1;
+            display: none;
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            width: min(100%, calc(var(--cols) * ((100cqh - (var(--rows) - 1) * 18px) / var(--rows) - 25px) + (var(--cols) - 1) * 16px));
+            height: min(100%, calc(var(--rows) * ((100cqw - (var(--cols) - 1) * 16px) / var(--cols) + 25px) + (var(--rows) - 1) * 18px));
+            gap: 18px 16px;
+            grid-auto-rows: minmax(0, 1fr);
+        }
+
+        #batch-preview-grid.cols-1 { --cols: 1; }
+
+        #batch-preview-grid:has(> :nth-child(3)) { --rows: 2; }
+
+        #batch-preview-grid.active:has(> :nth-child(5)) { --cols: 3; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+        #batch-preview-grid:has(> :nth-child(7)) { --rows: 3; }
+
+        #batch-preview-grid.active { display: grid; }
+
+        #batch-preview-grid.cols-1 { grid-template-columns: minmax(0, 1fr); }
+
+        #batch-preview-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+        .batch-thumb {
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+        }
+
+        .batch-thumb img {
+            display: block;
+            min-width: 0;
+            min-height: 0;
+            max-width: 100%;
+            max-height: calc(100% - 25px);
+            background: var(--checker-dark);
+            border-radius: 3px;
+            box-shadow: 0 0 0 1px var(--line);
+        }
+
+        .batch-thumb .thumb-label {
+            order: 2;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--muted);
+            pointer-events: none;
+        }
+
+        .batch-thumb.batch-more {
+            align-self: start;
+            justify-self: center;
+            height: calc(100% - 25px);
+            aspect-ratio: 1;
+            border-radius: 3px;
+            box-shadow: inset 0 0 0 1px var(--line);
+        }
+
+        .stage-bar {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto auto;
+            grid-template-areas:
+                "status status status status"
+                "preview . shot render";
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stage-bar .status-text { grid-area: status; }
+
+        .stage-bar #previewFab { grid-area: preview; }
+
+        .stage-bar #saveScreenshot { grid-area: shot; }
+
+        .stage-bar #renderBtn { grid-area: render; min-width: 168px; }
+
+        .preview-fab svg { width: 13px; height: 13px; }
+
+        .status-text {
+            min-height: 28px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 10px;
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .status-text .cancel-link { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+        .status-text .cancel-link:hover { color: var(--text); }
+
+        .st-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-weight: 600; }
+
+        .st-ok svg { color: var(--accent); }
+
+        .st-warn { flex-basis: 100%; color: var(--warn); }
+
+        .drag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 28px;
+            padding: 0 11px;
+            border-radius: 7px;
+            background: var(--accent-soft);
+            box-shadow: inset 0 0 0 1px rgba(138, 206, 0, 0.4);
+            color: var(--text);
+            font-weight: 500;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .drag-pill svg { color: var(--accent); }
+
+        .spin { animation: spin 0.9s linear infinite; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 900px) {
+            :root { --sidebar: 320px; }
+            .main-content { padding: 12px 18px 18px; }
+            .author-link span { display: none; }
+            #saveScreenshot { padding: 0 12px; }
+            #saveScreenshot .label { display: none; }
+            .stage-bar #renderBtn { min-width: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: 0s !important; }
+            #introArrow, body.intro-on #modeV2 { animation: none; }
         }
     </style>
 </head>
 
 <body>
-    <!-- SIDEBAR CONTROLS -->
-    <div class="sidebar">
-        <div class="header">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a10 10 0 0 1 10 10" />
-                <path d="M12 2C6.48 2 2 6.48 2 12l10 10 10-10C22 6.48 17.52 2 12 2z" />
-                <circle cx="9.5" cy="10.5" r="1" />
-                <circle cx="13" cy="8" r="0.5" />
-                <circle cx="14" cy="13" r="0.8" />
-            </svg>
-            <div style="display:flex; flex-direction:column;">
-                <h1>2Pizza Generator</h1>
-                <span id="app-version"
-                    style="font-size: 11px; color: var(--text-muted); margin-top: -2px;">v1.0.0</span>
-            </div>
-        </div>
-
-        <!-- Mode: plain text (v1) / text synced to a track (v2). Everything below is shared. -->
-        <div class="mode-switch" role="tablist">
-            <div class="mode-thumb"></div>
-            <button type="button" id="modeV1" class="active" role="tab">Текст</button>
-            <button type="button" id="modeV2" role="tab">Трек + текст</button>
-        </div>
-
-        <!-- 1. Content Card -->
-        <div class="card">
-            <div class="card-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 20h9"></path>
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                </svg>
-                Содержимое
-            </div>
-
-            <!-- v2: the track -->
-            <div class="input-group v2-only">
-                <label>Трек</label>
-                <div id="trackZone" class="track-zone" tabindex="0" title="Выбрать файл или перетащить его сюда">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 18V5l12-2v13"></path>
-                        <circle cx="6" cy="18" r="3"></circle>
-                        <circle cx="18" cy="16" r="3"></circle>
-                    </svg>
-                    <div class="track-info">
-                        <b id="trackName">Выберите или перетащите трек</b>
-                        <span id="trackMeta">mp3, wav, m4a, flac или видео</span>
+    <!-- SIDEBAR: settings -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand">
+                <div class="brand-tile" aria-hidden="true"><span>2pizza</span></div>
+                <div>
+                    <h1>2Pizza Generator</h1>
+                    <span id="app-version">v1.0.0</span>
+                    <div id="updateProgressContainer" class="update-line" style="display: none;">
+                        <div class="bar"><div id="updateProgressBar"></div></div>
+                        <span>Обновление <span id="updatePercent">0%</span></span>
+                        <span id="updateBytes" hidden>0 MB / 0 MB</span>
                     </div>
                 </div>
-                <details class="v2-fine">
-                    <summary>Тонкая настройка</summary>
-                    <div class="fine-body">
-                        <div class="input-row">
-                            <div class="input-group">
-                                <label>Взять трек с (сек)</label>
-                                <input type="number" id="clipStart" min="0" step="0.1" value="0">
-                            </div>
-                            <div class="input-group">
-                                <label>по (сек)</label>
-                                <input type="number" id="clipEnd" min="0" step="0.1" placeholder="до конца">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label>Текст раньше / позже голоса <span id="syncOffsetVal" style="color:var(--text-main);">0 мс</span></label>
-                            <input type="range" id="syncOffset" min="-300" max="300" step="10" value="0">
-                        </div>
-                    </div>
-                </details>
             </div>
 
-            <div id="text-input-container">
-                <div class="input-group">
-                    <label><span class="v1-only">Текст</span><span class="v2-only">Текст песни</span></label>
-                    <div id="inputText" class="rich-textarea" contenteditable="true">pizza generator</div>
-                    <div class="hint v2-only" style="margin-top: 4px;"><b style="color:var(--text-main);">↵ Перенос строки = новый
-                            клип.</b> Текст должен совпадать с тем, что поётся в треке: тайминги расставятся сами.</div>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">💡
-                        Выделяйте отдельные слова мышкой, чтобы красить их в разные цвета</div>
-                </div>
+            <!-- Mode: plain text (v1) / text synced to a track (v2). Everything below is shared. -->
+            <div class="mode-switch" role="tablist">
+                <div class="mode-thumb"></div>
+                <button type="button" id="modeV1" class="active" role="tab">Текст</button>
+                <button type="button" id="modeV2" role="tab">Трек + текст</button>
             </div>
-
-            <div id="batch-input-container"
-                style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500;">ПАКЕТНЫЕ
-                    ВИДЕО</div>
-                <div id="batchList">
-                    <!-- Dynamic inputs go here -->
-                </div>
-                <button id="addBatchBtn" class="btn-secondary"
-                    style="margin-top: 12px; padding: 8px; font-size: 13px;">+ Добавить видео</button>
-            </div>
-
-            <div class="input-row">
-                <div class="input-group">
-                    <label>Шрифт</label>
-                    <select id="fontFamily">
-                        <option value="Arial Narrow" selected>Arial Narrow</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>Выравнивание</label>
-                    <select id="textAlign">
-                        <option value="justify">Justify</option>
-                        <option value="left">Влево</option>
-                        <option value="center">По центру</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Цвет текста</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="color" id="textColorPicker" value="#ffffff"
-                        style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;">
-                    <div id="colorSwatch"
-                        style="width: 38px; height: 38px; min-width: 38px; border-radius: 6px; background: #ffffff; border: 1px solid var(--border-color); cursor: pointer; transition: background 0.15s ease;"
-                        title="Выбрать цвет"></div>
-                    <input type="text" id="textColor" value="#ffffff" maxlength="7"
-                        style="flex: 1; text-transform: uppercase; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; letter-spacing: 1px; padding: 8px 12px; background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; outline: none; transition: border-color 0.2s ease;">
-                    <button id="eyedropperBtn" type="button"
-                        title="🎯 Пипетка — берёт цвет из любого места экрана (даже вне приложения)"
-                        style="width: 38px; height: 38px; min-width: 38px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease, color 0.2s ease; color: var(--text-muted);"
-                        onmouseover="this.style.color='var(--accent)'"
-                        onmouseout="this.style.color='var(--text-muted)'"> <svg xmlns="http://www.w3.org/2000/svg"
-                            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m2 22 1-1h3l9-9" />
-                            <path d="M3 21v-3l9-9" />
-                            <path
-                                d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3L15 6" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Безопасная зона (Отступы) <span id="paddingValSpan"
-                        style="color:var(--text-main);">8%</span></label>
-                <input type="range" id="paddingRatio" min="0.0" max="0.25" step="0.01" value="0.08">
-            </div>
-
-            <label class="toggle-label">
-                <div>
-                    Автоперенос текста
-                    <span class="desc">Автоматически переносить длинные строки</span>
-                </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="autoWrap" checked>
-                    <span class="slider-round"></span>
-                </label>
-            </label>
-
-            <label class="toggle-label v1-only">
-                <div>
-                    Пакетный рендер
-                    <span class="desc">Создать отдельное видео для каждой строчки текста</span>
-                </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="batchMode">
-                    <span class="slider-round"></span>
-                </label>
-            </label>
-
-            <!-- Mini Editor Button -->
-            <button id="openTimelineBtn" class="btn-secondary" style="margin-top: 12px; display: none;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                    <line x1="10" y1="14" x2="10" y2="18"></line>
-                    <line x1="14" y1="14" x2="14" y2="18"></line>
-                </svg>
-                Открыть Таймлайн
-            </button>
         </div>
 
-        <!-- 2. Motion & Optics Card -->
-        <div class="card">
-            <div class="card-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-                Движение и Оптика
-            </div>
+        <div class="sidebar-scroll">
+            <!-- 1. Content -->
+            <section class="group">
+                <h2 class="group-title"><span class="v1-only">текст</span><span class="v2-only">трек и текст</span></h2>
 
-            <div class="input-group v2-only">
-                <label>Скорость печати <span style="color:var(--text-main);">под вокал</span></label>
-                <div class="hint">В режиме «Трек + текст» буквы печатаются, пока звучит слово.</div>
-            </div>
+                <!-- v2: the track -->
+                <div class="input-group v2-only">
+                    <div id="trackZone" class="track-zone" tabindex="0" title="Выбрать файл или перетащить его сюда">
+                        <div class="track-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18V5l12-2v13"></path>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <circle cx="18" cy="16" r="3"></circle>
+                            </svg>
+                        </div>
+                        <div class="track-info">
+                            <b id="trackName">Выберите или перетащите трек</b>
+                            <span id="trackMeta">mp3, wav, m4a, flac или видео</span>
+                        </div>
+                    </div>
+                    <details class="v2-fine">
+                        <summary>Тонкая настройка</summary>
+                        <div class="fine-body">
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="clipStart">Взять трек с, сек</label>
+                                    <input type="number" id="clipStart" min="0" step="0.1" value="0">
+                                </div>
+                                <div class="input-group">
+                                    <label for="clipEnd">по, сек</label>
+                                    <input type="number" id="clipEnd" min="0" step="0.1" placeholder="до конца">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="syncOffset">Текст раньше / позже голоса <span id="syncOffsetVal" class="val">0 мс</span></label>
+                                <input type="range" id="syncOffset" min="-300" max="300" step="10" value="0">
+                            </div>
+                        </div>
+                    </details>
+                </div>
 
-            <div class="input-group v1-only">
-                <label>Скорость печати <span id="speedValSpan" style="color:var(--text-main);">10 симв/с</span></label>
-                <div style="display:flex; gap:10px; align-items:center;">
+                <div id="text-input-container">
+                    <div class="input-group">
+                        <label class="v2-only">Текст песни</label>
+                        <div id="inputText" class="rich-textarea" contenteditable="true">pizza generator</div>
+                        <div class="hint v2-only"><b>↵ Перенос строки = новый клип.</b> Текст должен совпадать с тем,
+                            что поётся в треке: тайминги расставятся сами.</div>
+                        <div class="hint">Выделите слово мышкой, чтобы покрасить его в другой цвет.</div>
+                    </div>
+                </div>
+
+                <div id="batch-input-container" style="display: none;">
+                    <div id="batchList">
+                        <!-- Dynamic inputs go here -->
+                    </div>
+                    <button id="addBatchBtn" type="button" class="btn-ghost">+ Добавить видео</button>
+                </div>
+
+                <label class="toggle-label v1-only">
+                    <div>
+                        Пакетный рендер
+                        <span class="desc">Отдельное видео для каждого текста</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="batchMode">
+                        <span class="slider-round"></span>
+                    </label>
+                </label>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="fontFamily">Шрифт</label>
+                        <select id="fontFamily">
+                            <option value="Arial Narrow" selected>Arial Narrow</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="textAlign">Выравнивание</label>
+                        <select id="textAlign">
+                            <option value="justify">Justify</option>
+                            <option value="left">Влево</option>
+                            <option value="center">По центру</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="textColor">Цвет текста</label>
+                    <div class="color-field">
+                        <input type="color" id="textColorPicker" value="#ffffff"
+                            style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;">
+                        <div id="colorSwatch" class="swatch" style="background: #ffffff;" title="Выбрать цвет"></div>
+                        <input type="text" id="textColor" value="#ffffff" maxlength="7" spellcheck="false">
+                        <button id="eyedropperBtn" type="button" class="icon-btn"
+                            title="Пипетка: берёт цвет из любого места экрана, даже вне приложения">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m2 22 1-1h3l9-9" />
+                                <path d="M3 21v-3l9-9" />
+                                <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3L15 6" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="paddingRatio">Отступы от краёв <span id="paddingValSpan" class="val">8%</span></label>
+                    <input type="range" id="paddingRatio" min="0.0" max="0.25" step="0.01" value="0.08">
+                </div>
+
+                <label class="toggle-label">
+                    <div>
+                        Автоперенос текста
+                        <span class="desc">Длинные строки переносятся сами</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoWrap" checked>
+                        <span class="slider-round"></span>
+                    </label>
+                </label>
+
+                <!-- Mini Editor Button (timeline is hidden for now) -->
+                <button id="openTimelineBtn" type="button" class="btn-secondary" style="display: none;">Открыть таймлайн</button>
+            </section>
+
+            <!-- 2. Motion -->
+            <section class="group">
+                <h2 class="group-title">анимация</h2>
+
+                <div class="input-group v2-only">
+                    <label>Скорость печати <span class="val">под вокал</span></label>
+                    <div class="hint">Буквы печатаются, пока звучит слово.</div>
+                </div>
+
+                <div class="input-group v1-only">
+                    <label for="speedRange">Скорость печати <span id="speedValSpan" class="val">10 симв/с</span></label>
                     <input type="range" id="speedRange" min="1" max="60" value="10">
-                    <input type="number" id="speedInput" value="10"
-                        style="width: 60px; padding: 4px; text-align: center; display:none;">
+                    <input type="number" id="speedInput" value="10" style="display: none;">
                 </div>
-            </div>
 
-            <div class="input-group" style="margin-top: 16px;">
-                <label>Появление текста</label>
-                <select id="animationStyle">
-                    <option value="default" selected>Default (Pizza)</option>
-                    <option value="typewriter">Typewriter (Терминал)</option>
-                    <option value="glitch">Glitch (Матрица)</option>
-                </select>
-            </div>
-
-            <!-- Glitch Specific Controls -->
-            <div id="glitchControlsContainer"
-                style="display: none; margin-top: 12px; padding-left: 12px; border-left: 2px solid var(--border);">
                 <div class="input-group">
-                    <label>Набор символов (Glitch)</label>
-                    <select id="glitchCharset">
-                        <option value="symbols" selected>Символы (!@#$%...)</option>
-                        <option value="letters">Буквы (AaBbCc)</option>
-                        <option value="numbers">Цифры (0-9)</option>
-                        <option value="mixed">Смешанно (Всё вместе)</option>
+                    <label for="animationStyle">Появление текста</label>
+                    <select id="animationStyle">
+                        <option value="default" selected>Default (Pizza)</option>
+                        <option value="typewriter">Typewriter (Терминал)</option>
+                        <option value="glitch">Glitch (Матрица)</option>
                     </select>
                 </div>
-                <div class="input-group" style="margin-top: 8px;">
-                    <label>Скорость мерцания <span id="glitchSpeedVal"
-                            style="color:var(--text-main);">0.5</span></label>
-                    <input type="range" id="glitchSpeed" min="0.1" max="1.5" step="0.1" value="0.5">
-                </div>
-            </div>
 
-            <label class="toggle-label" style="margin-top: 12px; margin-bottom: 12px;">
-                <div>
-                    Мигающий курсор
-                    <span class="desc">Символ на конце строки</span>
+                <!-- Glitch Specific Controls -->
+                <div id="glitchControlsContainer" class="sub" style="display: none;">
+                    <div class="input-group">
+                        <label for="glitchCharset">Набор символов</label>
+                        <select id="glitchCharset">
+                            <option value="symbols" selected>Символы (!@#$%...)</option>
+                            <option value="letters">Буквы (AaBbCc)</option>
+                            <option value="numbers">Цифры (0-9)</option>
+                            <option value="mixed">Смешанно (всё вместе)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="glitchSpeed">Скорость мерцания <span id="glitchSpeedVal" class="val">0.5</span></label>
+                        <input type="range" id="glitchSpeed" min="0.1" max="1.5" step="0.1" value="0.5">
+                    </div>
                 </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="showCursor">
-                    <span class="slider-round"></span>
+
+                <label class="toggle-label">
+                    <div>
+                        Мигающий курсор
+                        <span class="desc">Символ на конце строки</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showCursor">
+                        <span class="slider-round"></span>
+                    </label>
                 </label>
-            </label>
 
-            <!-- Cursor Controls -->
-            <div id="cursorControlsContainer"
-                style="display: none; margin-bottom: 12px; padding-left: 12px; border-left: 2px solid var(--border); gap: 12px; align-items: flex-end;">
-                <div class="input-group" style="flex: 1;">
-                    <label>Стиль</label>
-                    <select id="cursorStyle" style="padding: 6px;">
-                        <option value="|" selected>|</option>
-                        <option value="_">_</option>
-                        <option value="█">█</option>
-                    </select>
+                <!-- Cursor Controls -->
+                <div id="cursorControlsContainer" class="sub" style="display: none;">
+                    <div class="input-group" style="flex: 1;">
+                        <label for="cursorStyle">Стиль</label>
+                        <select id="cursorStyle">
+                            <option value="|" selected>|</option>
+                            <option value="_">_</option>
+                            <option value="█">█</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex: 2;">
+                        <label for="cursorSpeed">Скорость <span class="val"><span id="cursorSpeedVal">1.0</span>x</span></label>
+                        <input type="range" id="cursorSpeed" min="0.1" max="5.0" step="0.1" value="1.0">
+                    </div>
                 </div>
 
-                <div class="input-group" style="flex: 2;">
-                    <label>Скорость <span id="cursorSpeedVal" style="color:var(--text-main);">1.0</span>x</label>
-                    <input type="range" id="cursorSpeed" min="0.1" max="5.0" step="0.1" value="1.0">
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>След движения (Motion Blur) <span id="motionBlurVal"
-                        style="color:var(--text-main);">0</span></label>
-                <input type="range" id="motionBlur" min="0" max="0.9" step="0.05" value="0">
-            </div>
-
-            <div class="input-group">
-                <label>Статичное размытие <span id="blurVal" style="color:var(--text-main);">2 px</span></label>
-                <input type="range" id="blurRange" min="0" max="10" step="0.5" value="2">
-            </div>
-        </div>
-
-        <!-- 3. Distortion Effects Card -->
-        <div class="card">
-            <div class="card-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-                </svg>
-                Искажения
-            </div>
-
-            <div class="input-group">
-                <label>Тряска <span id="jitterVal" style="color:var(--text-main);">0</span></label>
-                <input type="range" id="jitter" min="0" max="20" step="1" value="0">
-            </div>
-
-            <div class="input-group">
-                <label>Хроматическая аберрация <span id="chromaVal" style="color:var(--text-main);">0</span></label>
-                <input type="range" id="chroma" min="0" max="20" step="1" value="0">
-            </div>
-
-            <div class="input-group">
-                <label>Тень <span id="dropShadowVal" style="color:var(--text-main);">0</span></label>
-                <input type="range" id="dropShadow" min="0" max="50" step="1" value="0">
-            </div>
-        </div>
-
-        <!-- 4. Export & Output Card -->
-        <div class="card actions-card">
-            <div class="card-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                Настройки Вывода
-            </div>
-
-            <div class="input-row">
                 <div class="input-group">
-                    <label>Разрешение</label>
-                    <select id="resolution">
-                        <option value="900" selected>900x900</option>
-                        <option value="720">720x720</option>
-                        <option value="1080">1080x1080</option>
+                    <label for="motionBlur">След движения (motion blur) <span id="motionBlurVal" class="val">0</span></label>
+                    <input type="range" id="motionBlur" min="0" max="0.9" step="0.05" value="0">
+                </div>
+
+                <div class="input-group">
+                    <label for="blurRange">Статичное размытие <span id="blurVal" class="val">2 px</span></label>
+                    <input type="range" id="blurRange" min="0" max="10" step="0.5" value="2">
+                </div>
+            </section>
+
+            <!-- 3. Distortion -->
+            <section class="group">
+                <h2 class="group-title">искажения</h2>
+
+                <div class="input-group">
+                    <label for="jitter">Тряска <span id="jitterVal" class="val">0</span></label>
+                    <input type="range" id="jitter" min="0" max="20" step="1" value="0">
+                </div>
+
+                <div class="input-group">
+                    <label for="chroma">Хроматическая аберрация <span id="chromaVal" class="val">0</span></label>
+                    <input type="range" id="chroma" min="0" max="20" step="1" value="0">
+                </div>
+
+                <div class="input-group">
+                    <label for="dropShadow">Тень <span id="dropShadowVal" class="val">0</span></label>
+                    <input type="range" id="dropShadow" min="0" max="50" step="1" value="0">
+                </div>
+            </section>
+
+            <!-- 4. Output -->
+            <section class="group">
+                <h2 class="group-title">экспорт</h2>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="resolution">Разрешение</label>
+                        <select id="resolution">
+                            <option value="900" selected>900×900</option>
+                            <option value="720">720×720</option>
+                            <option value="1080">1080×1080</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex: 0.6;">
+                        <label for="fps">Кадров в секунду</label>
+                        <input type="number" id="fps" value="30">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="exportFormat">Формат видео</label>
+                    <select id="exportFormat">
+                        <option value="mov_prores" selected>MOV (Прозрачный ProRes)</option>
+                        <option value="mp4_green">MP4 (Зеленый экран)</option>
+                        <option value="mp4_black">MP4 (Черный фон)</option>
+                        <option value="mp4_white">MP4 (Белый фон)</option>
                     </select>
+                    <div class="hint with-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="11" x2="12" y2="16"></line>
+                            <line x1="12" y1="7.5" x2="12.01" y2="7.5"></line>
+                        </svg>
+                        <span>ProRes MOV сохраняет прозрачный фон для монтажа (CapCut, Premiere), но весит больше.
+                            В превью прозрачность показана клеткой.</span>
+                    </div>
                 </div>
-                <div class="input-group" style="flex: 0.5;">
-                    <label>Кадры/с (FPS)</label>
-                    <input type="number" id="fps" value="30">
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Формат Видео</label>
-                <select id="exportFormat">
-                    <option value="mov_prores" selected>MOV (Прозрачный ProRes)</option>
-                    <option value="mp4_green">MP4 (Зеленый экран)</option>
-                    <option value="mp4_black">MP4 (Черный фон)</option>
-                    <option value="mp4_white">MP4 (Белый фон)</option>
-                </select>
-            </div>
-
-            <div class="note">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <span>ProRes MOV обеспечивает прозрачность для видеоредакторов (CapCut/Premiere), но занимает больше
-                    места.</span>
-            </div>
-
-            <div style="display:flex; gap:10px; margin-top:8px;">
-                <button id="saveScreenshot" class="btn-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
-                    Сохранить Картинку
-                </button>
-                <button id="renderBtn" class="btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                    <span id="renderLabel">Рендер Видео</span>
-                </button>
-            </div>
-            <div class="status-text" id="status">Готово</div>
-
-            <!-- Telegram Button -->
-            <a href="#" onclick="window.electronAPI.openExternal('https://t.me/twopizzamusic'); return false;"
-                style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #2AABEE, #229ED9); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: transform 0.2s ease, opacity 0.2s ease;"
-                onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';"
-                onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)';">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m22 2-7 20-4-9-9-4Z"></path>
-                    <path d="M22 2 11 13"></path>
-                </svg>
-                Телеграм канал автора
-            </a>
-
-            <!-- Donation Button -->
-            <a href="#" onclick="window.electronAPI.openExternal('https://boosty.to/mamaotstan/donate'); return false;"
-                style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; padding: 12px; background: linear-gradient(135deg, #f15f2c, #e24915); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: transform 0.2s ease, opacity 0.2s ease;"
-                onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';"
-                onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)';">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
-                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-                    <line x1="6" y1="1" x2="6" y2="4"></line>
-                    <line x1="10" y1="1" x2="10" y2="4"></line>
-                    <line x1="14" y1="1" x2="14" y2="4"></line>
-                </svg>
-                Поддержать автора на Boosty
-            </a>
+            </section>
         </div>
-    </div>
+    </aside>
 
-    <!-- MAIN VIZ -->
-    <div class="main-content">
-        <div class="preview-area">
+    <!-- STAGE: the frame and the actions -->
+    <main class="main-content">
+        <div class="stage-top">
             <div id="preview-loader" class="preview-loader">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
                 <span id="loaderText">Рендеринг анимации...</span>
             </div>
-            <button id="previewFab" class="preview-fab">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path id="previewFabIcon" d="M8 5v14l11-7z" />
-                </svg>
-                <span id="previewFabLabel">Предпросмотр</span>
-            </button>
-            <img id="preview-img" src="" alt="Static Outline Preview">
+            <nav class="author-links">
+                <a href="#" class="author-link tg" title="Телеграм-канал автора"
+                    onclick="window.electronAPI.openExternal('https://t.me/twopizzamusic'); return false;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m22 2-7 20-4-9-9-4Z"></path>
+                        <path d="M22 2 11 13"></path>
+                    </svg>
+                    <span>Телеграм автора</span>
+                </a>
+                <a href="#" class="author-link boosty" title="Поддержать автора на Boosty"
+                    onclick="window.electronAPI.openExternal('https://boosty.to/mamaotstan/donate'); return false;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                        <line x1="6" y1="1" x2="6" y2="4"></line>
+                        <line x1="10" y1="1" x2="10" y2="4"></line>
+                        <line x1="14" y1="1" x2="14" y2="4"></line>
+                    </svg>
+                    <span>Поддержать на Boosty</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="preview-area">
+            <img id="preview-img" alt="">
             <video id="preview-video" muted playsinline></video>
             <canvas id="preview-canvas" width="900" height="900"></canvas>
             <audio id="preview-audio" preload="auto"></audio>
             <div id="batch-preview-grid"></div>
         </div>
-    </div>
 
-
-    </div>
+        <div class="stage-bar">
+            <div class="status-text" id="status" role="status"></div>
+            <button id="previewFab" type="button" class="preview-fab btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path id="previewFabIcon" d="M8 5v14l11-7z" />
+                </svg>
+                <span id="previewFabLabel">Предпросмотр</span>
+            </button>
+            <button id="saveScreenshot" type="button" class="btn-secondary" title="Сохранить текущий кадр как PNG">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span class="label">Сохранить картинку</span>
+            </button>
+            <button id="renderBtn" type="button" class="btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 4.5v15l12.5-7.5z" />
+                </svg>
+                <span id="renderLabel">Рендер видео</span>
+            </button>
+        </div>
+    </main>
 
     <!-- What's new in 2.0 (first launch) -->
     <div id="introOverlay" hidden></div>
@@ -1288,6 +1293,23 @@
     <script src="../sync/draw.js"></script>
 
     <script>
+        // Small icons for status messages
+        const spinnerIcon = `<svg class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+        const okIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+        const fileIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+
+        // Sliders show their value as a lime fill (from zero for the ones that go both ways)
+        const paintRange = (r) => {
+            const min = parseFloat(r.min) || 0, max = parseFloat(r.max) || 100;
+            const pos = (v) => ((Math.min(max, Math.max(min, v)) - min) / (max - min) * 100) + '%';
+            const zero = min < 0 && max > 0 ? 0 : min, v = parseFloat(r.value) || 0;
+            r.style.setProperty('--from', pos(Math.min(zero, v)));
+            r.style.setProperty('--to', pos(Math.max(zero, v)));
+        };
+        const paintRanges = () => document.querySelectorAll('input[type="range"]').forEach(paintRange);
+        document.addEventListener('input', (e) => { if (e.target.type === 'range') paintRange(e.target); }, true);
+        paintRanges();
+
         // Init App Version
         window.electronAPI.getVersion().then(v => {
             document.getElementById('app-version').innerText = `v${v}`;
@@ -1682,6 +1704,7 @@
         const debouncedStatic = debounce(updateStaticPreview, 50);
 
         const handleControlChange = () => {
+            paintRanges();
             debouncedStatic();
         };
 
@@ -1790,16 +1813,13 @@
             const list = document.getElementById('batchList');
             const count = list.children.length + 1;
             const div = document.createElement('div');
-            div.className = 'input-group';
-            div.style.position = 'relative';
-            div.style.marginTop = count === 1 ? '0' : '12px';
+            div.className = 'input-group batch-item';
             div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label style="margin: 0;">Видео ${count}</label>
-                    <span class="remove-btn" style="color: #ff4444; font-size: 12px; cursor: pointer; display: ${count === 1 ? 'none' : 'block'};">Удалить</span>
+                <div class="batch-head">
+                    <label>Видео ${count}</label>
+                    <button type="button" class="remove-btn"${count === 1 ? ' style="display: none;"' : ''}>Удалить</button>
                 </div>
-                <div class="batch-inputText rich-textarea" contenteditable="true" style="height: 60px;">${defaultText}</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">💡 Выделяйте отдельные слова мышкой, чтобы красить их в разные цвета</div>
+                <div class="batch-inputText rich-textarea" contenteditable="true">${defaultText}</div>
             `;
 
             div.querySelector('.remove-btn').addEventListener('click', () => {
@@ -1986,7 +2006,7 @@
 
             isRendering = true;
 
-            statusParams.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="spin" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"></circle></svg> Рендеринг видео...`;
+            statusParams.innerHTML = `${spinnerIcon} Рендеринг видео...`;
             document.getElementById('renderBtn').disabled = true;
 
             const result = await window.electronAPI.renderVideo({ text, config });
@@ -1996,7 +2016,7 @@
             if (result.success) {
                 // Determine text and file paths for the pill
                 const isBatch = config.batchMode;
-                const pillText = isBatch ? `✅ Батч-рендер завершен!` : `✅ Готово!`;
+                const pillText = isBatch ? 'Все видео готовы' : 'Готово';
                 // If batch, it's an array of paths that need to be escaped properly for the inline ondragstart handler
                 const pathsArg = isBatch
                     ? `JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(result.outputPath))}'))`
@@ -2004,39 +2024,16 @@
 
                 // Inject draggable pill
                 statusParams.innerHTML = `
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div>${pillText}</div>
-                    <div draggable="true" 
-                            style="cursor: grab; display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 255, 68, 0.1); border: 1px solid rgba(0, 255, 68, 0.3); padding: 4px 10px; border-radius: 6px; user-select: none;"
+                    <span class="st-ok">${okIcon} ${pillText}</span>
+                    <span class="drag-pill" draggable="true"
                             ondragstart="event.preventDefault(); window.electronAPI.startDrag(${pathsArg});"
-                            title="Потяните ${isBatch ? 'эти файлы' : 'этот файл'} в CapCut или папку">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                            Перетащить файл${isBatch ? 'ы' : ''} 
-                    </div>
-                </div>`;
+                            title="Потяните ${isBatch ? 'эти файлы' : 'этот файл'} в CapCut или папку">${fileIcon} Перетащить файл${isBatch ? 'ы' : ''}</span>`;
             } else {
                 statusParams.innerHTML = `<span style="color:var(--danger)">Ошибка: ${result.error || result.reason}</span>`;
             }
         });
 
-        // Add progress bar container to the UI via JS (cleaner than replacing large chunks)
-        const sidebarCards = document.querySelectorAll('.sidebar > .card');
-        const lastCard = sidebarCards[sidebarCards.length - 1]; // The action card
-
-        const progressHTML = `
-            <div id="updateProgressContainer" class="card" style="display: none; padding: 12px; gap: 8px; border-color: rgba(142, 206, 0, 0.5); background: rgba(142, 206, 0, 0.05); margin-top: 24px;">
-                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--text-main);">
-                    <span>Обновление...</span>
-                    <span id="updatePercent">0%</span>
-                </div>
-                <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden;">
-                    <div id="updateProgressBar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;"></div>
-                </div>
-                <div id="updateBytes" style="font-size: 11px; color: var(--text-muted); text-align: center;">0 MB / 0 MB</div>
-            </div>
-        `;
-        lastCard.insertAdjacentHTML('afterend', progressHTML);
-
+        // Update download progress: the pill above the preview (#updateProgressContainer)
         // Listen for auto-update progress from main process
         if (window.electronAPI && window.electronAPI.onUpdateProgress) {
             window.electronAPI.onUpdateProgress((data) => {
@@ -2101,7 +2098,7 @@
         };
         function isV2() { return appMode === 'v2'; }
         const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-        const spinner = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="spin" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"></circle></svg>`;
+        const spinner = spinnerIcon;
 
         function setMode(mode) {
             if (mode === appMode) return;
@@ -2202,8 +2199,6 @@
         function showBusy(text, frac) {
             const pct = frac != null ? ` ${Math.round(frac * 100)}%` : '';
             statusParams.innerHTML = `${spinner} ${escapeHtml(text)}${pct} <span class="cancel-link" data-cancel="1">отмена</span>`;
-            document.getElementById('loaderText').textContent = text + pct;
-            document.getElementById('preview-loader').classList.add('active');
         }
         function hideBusy() {
             document.getElementById('preview-loader').classList.remove('active');
@@ -2236,7 +2231,7 @@
             }));
         }
         const warnHtml = (sync) => sync.warnings && sync.warnings.length
-            ? `<div style="color:#fbbf24; text-align:center;">⚠ ${escapeHtml(sync.warnings.join(' '))}</div>` : '';
+            ? `<div class="st-warn">${escapeHtml(sync.warnings.join(' '))}</div>` : '';
 
         // --- preview: the synced animation drawn live in the window, with the track playing ---
         const pcv = document.getElementById('preview-canvas');
@@ -2322,14 +2317,10 @@
                 if (res && res.success) {
                     const p = res.outputPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     statusParams.innerHTML = `
-                <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div>✅ Готово!</div>
-                    <div draggable="true"
-                            style="cursor: grab; display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 255, 68, 0.1); border: 1px solid rgba(0, 255, 68, 0.3); padding: 4px 10px; border-radius: 6px; user-select: none;"
+                    <span class="st-ok">${okIcon} Готово</span>
+                    <span class="drag-pill" draggable="true"
                             ondragstart="event.preventDefault(); window.electronAPI.startDrag('${p}');"
-                            title="Потяните этот файл в CapCut или папку">Перетащить файл</div>
-                </div>${warnHtml(sync)}</div>`;
+                            title="Потяните этот файл в CapCut или папку">${fileIcon} Перетащить файл</span>${warnHtml(sync)}`;
                 } else if (res && (res.reason === 'cancelled' || res.error === 'Рендер отменён')) {
                     statusParams.textContent = 'Рендер отменён';
                 } else {
@@ -2367,7 +2358,7 @@
             intro.bubble.style.top = Math.round(r.bottom + 58) + 'px';
         }
         function showIntro() {
-            document.querySelector('.sidebar').scrollTop = 0;
+            document.querySelector('.sidebar-scroll').scrollTop = 0;
             for (const el of Object.values(intro)) el.hidden = false;
             document.body.classList.add('intro-on');
             placeIntro();
