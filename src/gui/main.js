@@ -54,9 +54,13 @@ app.whenReady().then(() => {
     createWindow();
 
     // Check for updates silently in the background
-    autoUpdater.checkForUpdatesAndNotify().catch(err => {
-        log.error("Check for updates failed:", err);
-    });
+    // Test builds started by the launcher never update themselves (and the unpacked
+    // test build has no app-update.yml: the updater would only show an error)
+    if (!process.env.BRAT_TEST_BUILD) {
+        autoUpdater.checkForUpdatesAndNotify().catch(err => {
+            log.error("Check for updates failed:", err);
+        });
+    }
 
     app.on('activate', function () {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
