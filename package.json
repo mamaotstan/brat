@@ -70,7 +70,7 @@
       "node_modules/ffmpeg-static/**",
       "node_modules/onnxruntime-node/**",
       "node_modules/onnxruntime-common/**",
-      "src/sync/**",
+      "src/sync/{worker,engine,align,fbank,tokenizer,text,audio}.js",
       "assets/models/**"
     ],
     "win": {
