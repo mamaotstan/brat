@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveScreenshot: (data) => ipcRenderer.invoke('save-screenshot', data),
     buildLivePreview: (data) => ipcRenderer.invoke('build-live-preview', data),
     getVersion: () => ipcRenderer.invoke('get-version'),
+    isTestBuild: () => ipcRenderer.invoke('is-test-build'),
     getSystemFonts: () => ipcRenderer.invoke('get-system-fonts'),
     pickScreenColor: () => ipcRenderer.invoke('pick-screen-color'),
     openExternal: (url) => ipcRenderer.invoke('open-external', url),

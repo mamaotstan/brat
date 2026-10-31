@@ -414,6 +414,121 @@
             display: none !important;
         }
 
+        /* --- What's new in 2.0: shown on the first launch --- */
+        #introOverlay[hidden],
+        #introArrow[hidden],
+        #introBubble[hidden] {
+            display: none !important;
+        }
+
+        #introOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.66);
+            z-index: 900;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body.intro-on .mode-switch {
+            position: relative;
+            z-index: 901;
+            box-shadow: 0 0 0 3px rgba(142, 206, 0, 0.55), 0 0 36px rgba(142, 206, 0, 0.45);
+        }
+
+        body.intro-on #modeV2 {
+            animation: introPulse 1.6s ease-in-out infinite;
+        }
+
+        @keyframes introPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(142, 206, 0, 0.0); }
+            50% { box-shadow: 0 0 0 5px rgba(142, 206, 0, 0.45); }
+        }
+
+        #introArrow {
+            position: fixed;
+            z-index: 902;
+            color: var(--accent);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            animation: introBounce 1s ease-in-out infinite;
+        }
+
+        @keyframes introBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-9px); }
+        }
+
+        #introBubble {
+            position: fixed;
+            z-index: 902;
+            width: 320px;
+            background: var(--bg-card);
+            border: 1px solid rgba(142, 206, 0, 0.7);
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        body.intro-show #introOverlay,
+        body.intro-show #introArrow {
+            opacity: 1;
+        }
+
+        body.intro-show #introBubble {
+            opacity: 1;
+            transform: none;
+        }
+
+        #introBubble .intro-tag {
+            align-self: flex-start;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #000;
+            background: var(--accent);
+            border-radius: 6px;
+            padding: 3px 8px;
+        }
+
+        #introBubble .intro-title {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            line-height: 1.25;
+        }
+
+        #introBubble .intro-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        #introBubble .intro-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        #introBubble .intro-actions button {
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        #introBubble .intro-actions .btn-secondary {
+            flex: 0 0 auto;
+            width: auto;
+            padding: 10px 16px;
+        }
+
         /* --- v2: track --- */
         .track-zone {
             display: flex;
@@ -766,7 +881,7 @@
                         <circle cx="18" cy="16" r="3"></circle>
                     </svg>
                     <div class="track-info">
-                        <b id="trackName">Выбери или перетащи трек</b>
+                        <b id="trackName">Выберите или перетащите трек</b>
                         <span id="trackMeta">mp3, wav, m4a, flac или видео</span>
                     </div>
                 </div>
@@ -1144,6 +1259,26 @@
     </div>
 
 
+    </div>
+
+    <!-- What's new in 2.0 (first launch) -->
+    <div id="introOverlay" hidden></div>
+    <div id="introArrow" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="40" viewBox="0 0 34 40" fill="none" stroke="currentColor"
+            stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 38V4"></path>
+            <path d="M5 16L17 4l12 12"></path>
+        </svg>
+    </div>
+    <div id="introBubble" role="dialog" aria-labelledby="introTitle" hidden>
+        <div class="intro-tag">Новое в версии 2.0</div>
+        <div class="intro-title" id="introTitle">Попробуйте новый режим «Трек&nbsp;+&nbsp;текст»</div>
+        <div class="intro-text">Загрузите отрывок трека и вставьте текст песни — слова сами встанут под вокал.
+            Анимация и все настройки те же, что и в обычном режиме.</div>
+        <div class="intro-actions">
+            <button type="button" class="btn-primary" id="introTry">Попробовать</button>
+            <button type="button" class="btn-secondary" id="introLater">Позже</button>
+        </div>
     </div>
 
     <!-- shared with the video renderer: text layout and the v2 frame painter (CommonJS files loaded into the page) -->
@@ -1978,7 +2113,7 @@
             const batch = document.getElementById('batchMode');
             if (isV2() && batch.checked) { batch.checked = false; batch.dispatchEvent(new Event('change')); }
             store.set('2pizza.mode', appMode);
-            statusParams.textContent = isV2() && !v2.track ? 'Выбери трек и вставь текст песни' : '';
+            statusParams.textContent = isV2() && !v2.track ? 'Выберите трек и вставьте текст песни' : '';
             handleControlChange();
         }
         document.getElementById('modeV1').addEventListener('click', () => setMode('v1'));
@@ -1988,8 +2123,8 @@
         const fmtTime = (sec) => { const m = Math.floor(sec / 60); return `${m}:${(sec - m * 60).toFixed(1).padStart(4, '0')}`; };
         function showTrack() {
             document.getElementById('trackZone').classList.toggle('loaded', !!v2.track);
-            document.getElementById('trackName').textContent = v2.track ? v2.track.name : 'Выбери или перетащи трек';
-            document.getElementById('trackMeta').textContent = v2.track ? `${fmtTime(v2.track.duration)} · нажми, чтобы сменить` : 'mp3, wav, m4a, flac или видео';
+            document.getElementById('trackName').textContent = v2.track ? v2.track.name : 'Выберите или перетащите трек';
+            document.getElementById('trackMeta').textContent = v2.track ? `${fmtTime(v2.track.duration)} · нажмите, чтобы сменить` : 'mp3, wav, m4a, flac или видео';
         }
         function loadTrack(info, quiet) {
             if (!info) return;
@@ -2000,7 +2135,7 @@
             if (!quiet) {
                 document.getElementById('clipStart').value = 0;
                 document.getElementById('clipEnd').value = '';
-                statusParams.textContent = 'Трек загружен. Вставь текст песни и жми «Предпросмотр» или «Рендер»';
+                statusParams.textContent = 'Трек загружен. Вставьте текст песни и нажмите «Предпросмотр» или «Рендер Видео»';
             }
             showTrack();
         }
@@ -2079,9 +2214,9 @@
         window.electronAPI.onSyncRenderProgress((v) => { if (v2Busy) showBusy('Рендер…', v); });
 
         async function ensureSync() {
-            if (!v2.track) throw new Error('Сначала выбери трек');
+            if (!v2.track) throw new Error('Сначала выберите трек');
             const lyr = v2Lyrics();
-            if (!lyr.lines.length) throw new Error('Вставь текст песни');
+            if (!lyr.lines.length) throw new Error('Вставьте текст песни');
             const clip = clipRange();
             const key = JSON.stringify([v2.track.path, clip.start, clip.end, lyr.text]);
             if (v2.sync && v2.sync.key === key) return v2.sync;
@@ -2214,6 +2349,50 @@
             const savedTrack = store.get('2pizza.track', '');
             if (savedTrack) window.electronAPI.syncAudioInfo(savedTrack).then((info) => loadTrack(info, true)).catch(() => { });
             if (store.get('2pizza.mode', 'v1') === 'v2') setMode('v2');
+        })();
+
+        // --- what's new in 2.0: once per installation (on every launch in test builds) ---
+        const intro = {
+            overlay: document.getElementById('introOverlay'),
+            arrow: document.getElementById('introArrow'),
+            bubble: document.getElementById('introBubble'),
+        };
+        function placeIntro() {
+            const r = document.getElementById('modeV2').getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            intro.arrow.style.left = Math.round(cx - 17) + 'px';
+            intro.arrow.style.top = Math.round(r.bottom + 10) + 'px';
+            const w = intro.bubble.offsetWidth || 320;
+            intro.bubble.style.left = Math.round(Math.max(12, Math.min(window.innerWidth - w - 12, cx - w / 2))) + 'px';
+            intro.bubble.style.top = Math.round(r.bottom + 58) + 'px';
+        }
+        function showIntro() {
+            document.querySelector('.sidebar').scrollTop = 0;
+            for (const el of Object.values(intro)) el.hidden = false;
+            document.body.classList.add('intro-on');
+            placeIntro();
+            requestAnimationFrame(() => document.body.classList.add('intro-show'));
+        }
+        function hideIntro(tryIt) {
+            if (!document.body.classList.contains('intro-on')) return;
+            document.body.classList.remove('intro-show');
+            setTimeout(() => {
+                document.body.classList.remove('intro-on');
+                for (const el of Object.values(intro)) el.hidden = true;
+            }, 300);
+            if (tryIt) setMode('v2');
+        }
+        document.getElementById('introTry').addEventListener('click', () => hideIntro(true));
+        document.getElementById('introLater').addEventListener('click', () => hideIntro(false));
+        intro.overlay.addEventListener('click', () => hideIntro(false));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideIntro(false); });
+        window.addEventListener('resize', () => { if (document.body.classList.contains('intro-on')) placeIntro(); });
+        (async () => {
+            let testBuild = false;
+            try { testBuild = await window.electronAPI.isTestBuild(); } catch (e) { /* older bridge */ }
+            if (!testBuild && store.get('2pizza.introV2', '') === 'seen') return;
+            store.set('2pizza.introV2', 'seen');
+            setTimeout(showIntro, 700);
         })();
 
     </script>

@@ -159,7 +159,7 @@ class AlignEngine {
         while (f1 > f0 && full.times[f1 - 1] > PAD_SEC + duration) f1--;
         const enc = { data: full.data.subarray(f0 * full.dim, f1 * full.dim), frames: f1 - f0, dim: full.dim, times: full.times.slice(f0, f1) };
         const T = enc.frames, U = ys.length;
-        if (T - MIN_FRAME < U) throw new Error('Текста больше, чем помещается в этот отрывок. Проверь, что текст соответствует звуку.');
+        if (T - MIN_FRAME < U) throw new Error('Текста больше, чем помещается в этот отрывок. Проверьте, что текст соответствует звуку.');
 
         const dec = await this.decoderStates(ys);
         // waiting cost between pieces of one word (state u = u pieces emitted)

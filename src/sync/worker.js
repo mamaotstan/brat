@@ -24,7 +24,7 @@ async function run(msg) {
     if (samples.length < 16000 * 0.5) throw new Error('Отрывок слишком короткий или файл не читается');
     progress('audio', 1);
     const lines = parseLyrics(msg.lyrics);
-    if (!lines.length) throw new Error('Вставь текст песни');
+    if (!lines.length) throw new Error('Вставьте текст песни');
     // BRAT_TEST_ORT lets tests swap in an onnxruntime test double.
     const ort = process.env.BRAT_TEST_ORT ? require(process.env.BRAT_TEST_ORT) : undefined;
     const engine = new AlignEngine({ modelDir: msg.modelDir, threads: msg.threads, ort });

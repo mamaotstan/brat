@@ -182,6 +182,7 @@ ipcMain.handle('get-preset', () => presets);
 // Get app version
 // Test builds started by the launcher show their commit next to the version
 ipcMain.handle('get-version', () => app.getVersion() + (process.env.BRAT_TEST_BUILD ? ` · тест ${process.env.BRAT_TEST_BUILD}` : ''));
+ipcMain.handle('is-test-build', () => !!process.env.BRAT_TEST_BUILD);
 
 // Pick color from screen (native eyedropper for outside app window)
 ipcMain.handle('pick-screen-color', async () => {
@@ -728,7 +729,7 @@ async function describeAudio(filePath) {
 
 ipcMain.handle('sync-pick-audio', async () => {
     const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-        title: 'Выбери трек',
+        title: 'Выберите трек',
         properties: ['openFile'],
         filters: [
             { name: 'Аудио и видео', extensions: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'wma', 'aiff', 'aif', 'mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi'] },
